@@ -1,0 +1,10 @@
+# Ignore non-code artifacts and generated data/logs
+/*.txt
+/.env
+__pycache__/
+*/__pycache__/
+*.pyc
+
+# Agent runtime outputs
+/data/
+/logs/
