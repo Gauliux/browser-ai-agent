@@ -4,6 +4,7 @@ import asyncio
 import os
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, TypedDict
+from datetime import datetime, timezone
 
 from agent.config import Settings
 from agent.execute import ExecutionResult, execute_with_fallbacks, save_execution_result
@@ -524,11 +525,6 @@ def build_graph(
         # Pass overlay/mapping limit hints via page attributes
         setattr(page, "_hide_overlay", settings.hide_overlay)
         setattr(page, "_mapping_boost", 0)
-        # Switch active page by hint if tab changed (new page created)
-        if state.get("planner_result") and state["planner_result"].action.get("action") == "switch_tab":
-            hint_val = state["planner_result"].action.get("value")
-            if hint_val:
-                await runtime.set_active_page_by_hint(url_substr=str(hint_val), title_substr=str(hint_val))
         observation = await _capture_with_retry(
             runtime,
             settings,
@@ -645,7 +641,29 @@ def build_graph(
                     )
                 except Exception:
                     pass
-            return {**state, "conservative_probe_done": True}
+            observation = await _capture_with_retry(
+                runtime,
+                settings,
+                capture_screenshot=False,
+                label=f"{state['session_id']}-conservative-{state.get('step', 0)}",
+            )
+            recent = list(state.get("recent_observations", []))
+            recent.append(observation)
+            recent = recent[-3:]
+            goal_tokens = _goal_tokens(state["goal"])
+            candidates = _extract_candidates(observation.mapping, goal_tokens, limit=10)
+            return {
+                **state,
+                "conservative_probe_done": True,
+                "observation": observation,
+                "prev_observation": state.get("observation"),
+                "mapping_hash": _mapping_hash(observation),
+                "stagnation_count": 0,
+                "recent_observations": recent,
+                "candidate_elements": candidates,
+                "prev_candidate_hash": state.get("candidate_hash"),
+                "candidate_hash": _candidate_hash(candidates),
+            }
         if auto_scrolls_used < settings.max_auto_scrolls:
             text_log.write(f"[{state['session_id']}] loop mitigation: paged scan")
             observation = await _paged_scan(runtime, settings, label_prefix=state["session_id"])
@@ -871,11 +889,11 @@ def build_graph(
         dynamic_limit = base_limit + (10 if goal_len > 120 else 0) + (settings.loop_retry_mapping_boost if error_context != "none" else 0)
         mapping_limit = min(150, dynamic_limit)
         # FSM allowed actions guidance.
-        allowed_actions = ["click", "scroll", "navigate", "search", "go_back", "go_forward", "switch_tab"]
+        allowed_actions = ["click", "scroll", "navigate", "search", "go_back", "go_forward", "switch_tab", "type"]
         if goal_stage in {"context"}:
             allowed_actions = ["click", "scroll", "search", "go_back"]
         elif goal_stage in {"locate"}:
-            allowed_actions = ["click", "scroll", "search", "go_back", "navigate"]
+            allowed_actions = ["click", "type", "scroll", "search", "go_back", "navigate"]
         elif goal_stage in {"verify"}:
             allowed_actions = ["click", "scroll", "screenshot", "go_back"]
         # Meta actions allowed only from locate/verify onward.
@@ -1042,6 +1060,111 @@ def build_graph(
         exec_error: Optional[str] = None
         new_obs = observation
         obs_before = observation
+
+        if action.get("action") == "switch_tab":
+            hint_val = action.get("value")
+            index_hint: Optional[int] = None
+            if isinstance(hint_val, str) and hint_val.strip().isdigit():
+                try:
+                    index_hint = int(hint_val.strip())
+                except Exception:
+                    index_hint = None
+            # Try to switch tab by index or substring hints; treat as success even if no match to avoid loop penalties.
+            try:
+                await runtime.set_active_page_by_hint(
+                    url_substr=str(hint_val) if hint_val else None,
+                    title_substr=str(hint_val) if hint_val else None,
+                    index=index_hint,
+                )
+            except Exception:
+                pass
+            # Refresh observation to reflect active tab best-effort.
+            try:
+                new_obs = await _capture_with_retry(
+                    runtime,
+                    settings,
+                    capture_screenshot=False,
+                    label=f"{state['session_id']}-step{state.get('step', 0)}",
+                )
+                state["observation"] = new_obs
+            except Exception:
+                new_obs = observation
+            exec_result = ExecutionResult(
+                success=True,
+                action=action,
+                error=None,
+                screenshot_path=None,
+                recorded_at=datetime.now(timezone.utc).isoformat(),
+            )
+            exec_result_path = save_execution_result(
+                exec_result,
+                settings.paths.state_dir,
+                label=f"{state['session_id']}-step{state.get('step', 0)}",
+            )
+            exec_success = True
+            exec_error = None
+            url_changed = bool(obs_before and new_obs and obs_before.url != new_obs.url)
+            dom_changed = bool(_mapping_hash(obs_before) != _mapping_hash(new_obs)) if obs_before and new_obs else False
+            state["last_state_change"] = {"url_changed": url_changed, "dom_changed": dom_changed}
+            state["last_action_no_effect"] = False
+            record = {
+                "step": state.get("step", 0),
+                "session_id": state["session_id"],
+                "step_id": step_id,
+                "action": action,
+                "planner_retries": planner_result.retries_used if planner_result else 0,
+                "security_requires_confirmation": state.get("security_decision").requires_confirmation if state.get("security_decision") else False,
+                "execute_success": exec_success,
+                "execute_error": exec_error,
+                "exec_result_path": str(exec_result_path) if exec_result_path else None,
+                "planner_raw_path": str(planner_result.raw_path) if planner_result and planner_result.raw_path else None,
+                "loop_trigger": state.get("loop_trigger"),
+                "stop_reason": state.get("stop_reason"),
+                "stop_details": state.get("stop_details"),
+                "url_changed": url_changed,
+                "dom_changed": dom_changed,
+                "loop_trigger_sig": state.get("loop_trigger_sig"),
+                "attempts_per_element": state.get("exec_fail_counts", {}),
+                "max_attempts_per_element": settings.max_attempts_per_element,
+            }
+            records = state.get("records", [])
+            records.append(record)
+            if trace:
+                try:
+                    trace.write(record)
+                except Exception:
+                    pass
+            action_history = state.get("action_history", [])
+            action_history.append(
+                {
+                    "action": action.get("action"),
+                    "element_id": action.get("element_id"),
+                    "url": new_obs.url if new_obs else None,
+                    "url_changed": url_changed,
+                    "dom_changed": dom_changed,
+                }
+            )
+            visited_urls = dict(state.get("visited_urls", {}))
+            if new_obs:
+                visited_urls[new_obs.url] = visited_urls.get(new_obs.url, 0) + 1
+            candidate_list = _extract_candidates(new_obs.mapping, _goal_tokens(state["goal"]), limit=10) if new_obs else state.get("candidate_elements", [])
+            return {
+                **state,
+                "planner_result": planner_result,
+                "exec_result": exec_result,
+                "records": records,
+                "visited_elements": state.get("visited_elements", {}),
+                "visited_urls": visited_urls,
+                "avoid_elements": list(state.get("avoid_elements", [])),
+                "mapping_hash": _mapping_hash(new_obs),
+                "candidate_elements": candidate_list,
+                "prev_candidate_hash": state.get("candidate_hash"),
+                "candidate_hash": _candidate_hash(candidate_list) if new_obs else state.get("candidate_hash"),
+                "stagnation_count": 0,
+                "recent_observations": (state.get("recent_observations", []) + ([new_obs] if new_obs else []))[-3:],
+                "action_history": action_history,
+                "observation": new_obs,
+            }
 
         # Meta actions: stop immediately with reason (navigate executes normally).
         if action.get("action") in {"done", "ask_user"}:
@@ -1361,6 +1484,16 @@ def build_graph(
                             except Exception:
                                 pass
                         return {**state, "stop_reason": "progress_ask_user", "stop_details": str(evidence)}
+
+        if action.get("action") == "switch_tab":
+            return {
+                **state,
+                "last_progress_score": score,
+                "last_progress_evidence": evidence,
+                "page_type": page_type,
+                "no_progress_steps": state.get("no_progress_steps", 0),
+                "step": state.get("step", 0) + 1,
+            }
 
         # loop repeat tracking
         sig = (action.get("action"), action.get("element_id"), observation.url)

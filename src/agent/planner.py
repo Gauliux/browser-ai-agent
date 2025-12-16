@@ -126,6 +126,7 @@ def _format_observation(observation: Observation, *, limit: int = 30) -> str:
                 "zone": m.zone,
                 "is_fixed": m.is_fixed,
                 "is_nav": m.is_nav,
+                "is_disabled": getattr(m, "is_disabled", False),
             }
             for m in mapping
         ],

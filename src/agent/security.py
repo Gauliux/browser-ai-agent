@@ -63,7 +63,7 @@ def analyze_action(action: Dict[str, Any], observation: Observation) -> Security
     element_id = action.get("element_id")
 
     # Ask/Done are non-destructive by design.
-    if action_type in {"ask_user", "done", "navigate", "go_back", "go_forward", "search"}:
+    if action_type in {"ask_user", "done"}:
         return SecurityDecision(False, None)
 
     element_text = _get_element_text(observation, element_id)
@@ -81,8 +81,8 @@ def analyze_action(action: Dict[str, Any], observation: Observation) -> Security
     if _has_sensitive_form(observation):
         return SecurityDecision(True, "Sensitive form detected on page.")
 
-    # Sensitive paths/domains for navigation.
-    if action_type == "navigate":
+    # Sensitive paths/domains for navigation/history/search flows.
+    if action_type in {"navigate", "search", "go_back", "go_forward"}:
         target_url = str(value).lower()
         if _SENSITIVE_PATHS.search(target_url) or _RISKY_DOMAINS.search(target_url):
             return SecurityDecision(True, "Navigation to risky domain/path.")

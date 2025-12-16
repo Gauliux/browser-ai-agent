@@ -138,6 +138,7 @@ class ElementMark:
     bbox: BoundingBox
     is_fixed: bool = False
     is_nav: bool = False
+    is_disabled: bool = False
     attr_name: Optional[str] = None
     attr_id: Optional[str] = None
     aria_label: Optional[str] = None
@@ -153,6 +154,7 @@ class ElementMark:
             zone=raw.get("zone"),
             is_fixed=bool(raw.get("is_fixed", False)),
             is_nav=bool(raw.get("is_nav", False)),
+            is_disabled=bool(raw.get("is_disabled", False)),
             attr_name=raw.get("attr_name"),
             attr_id=raw.get("attr_id"),
             aria_label=raw.get("aria_label"),
@@ -173,6 +175,7 @@ class ElementMark:
             "zone": self.zone,
             "is_fixed": self.is_fixed,
             "is_nav": self.is_nav,
+            "is_disabled": self.is_disabled,
             "attr_name": self.attr_name,
             "attr_id": self.attr_id,
             "aria_label": self.aria_label,
