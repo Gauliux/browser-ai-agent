@@ -9,7 +9,7 @@ Known Limitations
 - No mock/test harness for quick regression; no automated tests.
 - UI shell prompts not localized for new terminal reasons.
 - Planner allowed_actions enforcement is stage-based but not semantic beyond current heuristics.
-- Token strategy: role/goal-aware sorting and dynamic limits, but no deep adaptive sampling or CV.
+- Token strategy: role/title-aware sorting (по токенам заголовка страницы) и dynamic limits; goal-aware используются только для списка кандидатов, CV нет.
 
 Future Improvements (potential)
 -------------------------------

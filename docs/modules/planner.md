@@ -17,7 +17,7 @@ Action Schema
 
 Key Behavior
 ------------
-- _format_observation: serialize observation with capped mapping, zone round-robin, goal-aware scoring for ordering; trims text.
+- _format_observation: serialize observation with capped mapping, zone round-robin, title-token scoring (из текста страницы) для ordering; trims text.
 - _recent_context_text: last observations summary (up to 3).
 - _goal_tokens_from_title: extract tokens for scoring.
 - plan(...):
