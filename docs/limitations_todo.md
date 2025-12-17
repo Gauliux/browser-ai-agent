@@ -3,9 +3,9 @@ Limitations and TODOs
 
 Known Limitations
 -----------------
-- No automatic tab switching on URL/title changes; only via switch_tab action/hint.
+- Нет эвристик выбора вкладки: активная вкладка меняется только при явном switch_tab/новой вкладке от браузера.
 - Page types limited to listing/detail heuristic; no explicit HOME/SEARCH_FORM classification.
-- Legacy loop (src/agent/loop.py) retained but not maintained.
+- Legacy loop (src/agent/legacy/loop.py) retained but not maintained.
 - No mock/test harness for quick regression; no automated tests.
 - UI shell prompts not localized for new terminal reasons.
 - Planner allowed_actions enforcement is stage-based but not semantic beyond current heuristics.

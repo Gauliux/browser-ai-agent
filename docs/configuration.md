@@ -6,7 +6,7 @@ Environment Variables (defaults) — подробно
 - OPENAI_API_KEY — ключ для вызова LLM; без него агент не планирует (только открывает браузер).
 - OPENAI_MODEL=gpt-4o-mini — модель для планера.
 - OPENAI_BASE_URL — кастомный endpoint, если нужен.
-- START_URL=about:blank — стартовая страница при запуске runtime.
+- START_URL=about:blank - стартовая страница при запуске runtime.
 - HEADLESS=false — если true, браузер без UI (обычно держим false для наблюдения).
 - MAPPING_LIMIT=30 — базовый лимит элементов, отправляемых планеру; влияет на размер контекста и токены.
 - PLANNER_SCREENSHOT_MODE=auto (auto|always|never) — включает/выключает передачу скрина в планер.
@@ -37,12 +37,12 @@ Environment Variables (defaults) — подробно
 - MAX_PLANNER_CALLS=20 — бюджет LLM вызовов; превышение → goal_failed.
 - MAX_NO_PROGRESS_STEPS=20 — бюджет шагов без прогресса; превышение → goal_failed.
 - INTERACTIVE_PROMPTS=false — если true, progress/ask_user блокируют и спрашивают; иначе без ожидания.
-- Path overrides: USER_DATA_DIR, SCREENSHOTS_DIR, STATE_DIR, LOGS_DIR — расположение профиля/артефактов/логов.
+- Path overrides: USER_DATA_DIR, SCREENSHOTS_DIR, STATE_DIR, LOGS_DIR - расположение профиля/артефактов/логов.
 - Security lists: SENSITIVE_PATHS, RISKY_DOMAINS — строки через запятую; навигация на них требует confirm.
 - EXECUTE (не основной, но читается) — включает исполнение в legacy контексте; в CLI есть --execute.
 - USE_LANGGRAPH (опционально) — включает LangGraph по env.
 
-CLI Flags (override env) — подробно
+CLI Flags (override env) - подробно
 -----------------------------------
 - --goal / --goals — задать одну или несколько целей (очередь).
 - --execute — включить выполнение действий (иначе только планер; для LangGraph обычно включаем).
@@ -62,7 +62,11 @@ CLI Flags (override env) — подробно
 - --conservative-observe — включить аккуратный проход перед скроллом при лупе.
 - --max-reobserve-attempts — лимит реобсерваций в execute fallbacks.
 - --max-attempts-per-element — сколько фейлов до avoid.
-- --scroll-step — шаг скролла (переопределяет env).
+- --scroll-step - шаг скролла (переопределяет env).
+
+Priority
+--------
+- CLI overrides → .env в корне репозитория → переменные окружения процесса. .env загружается с override=True, чтобы не пропускать значения из файла.
 
 Что влияет на что (кратко)
 --------------------------

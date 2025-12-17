@@ -1,36 +1,36 @@
-Module: src/agent/execute.py
-============================
+Module: src/agent/core/execute.py
+=================================
 
 Responsibility
 --------------
-- Execute planner actions via Playwright; capture results and screenshots; persist execution artifacts.
-- Provide fallback chain and avoid/retry logic.
+- Execute planner actions via Playwright; capture results/screenshots; persist execution artifacts.
+- Provide fallback chain and best-effort resilience for flaky DOM.
 
 Data Structures
 ---------------
 - ExecutionResult: success, action, error, screenshot_path, recorded_at; to_dict().
-- save_execution_result: save ExecutionResult JSON with optional label to state_dir.
+- save_execution_result: save ExecutionResult JSON (labelled) to paths.state_dir.
 
 Action Execution
 ----------------
-- Supported actions: done/ask_user (meta), go_back/go_forward, navigate (value required), search (type query + Enter, with Ctrl+L fallback), scroll (mouse wheel or scroll_into_view), click, type (fill + optional Enter), screenshot.
-- Screenshots: _capture/_maybe_capture, filenames include label (often session-step).
-- _locate_element: find by data-agent-id; raises if missing.
+- Supported actions: done/ask_user (meta), go_back/go_forward, navigate (value required),
+  search (type query + Enter, with Ctrl+L fallback), scroll, click, type (fill + optional Enter), screenshot.
+- switch_tab как first-class: переключение активной страницы делается на уровне runtime/execute-node;
+  само исполнение не должно трактовать tab-switch как failure.
+- Скрины: filenames включают label (обычно session-step).
 
 Fallback Chain (execute_with_fallbacks)
 ---------------------------------------
-- Initial execute_action; if fail (non-meta), retries up to max_reobserve_attempts:
-  - Optional wiggle scroll (alternating direction, scroll_step setting).
-  - Reobserve via capture_observation (labelled), then retry execute_action.
-- If still failing and action is click:
-  - JS click on element id; then text-match click by element text.
-- Per-element failures tracked by caller (LangGraph execute_node) to avoid elements.
-- Artifacts (screenshots and observations) use unified label (session-step if provided).
+- Initial execute_action; если fail (не meta), ретраи до max_reobserve_attempts:
+  - Optional wiggle scroll (alternating direction, scroll_step).
+  - Reobserve через capture_observation (labelled), затем повтор execute_action.
+- Если всё ещё fail и action=click: JS click по element id → text-match click по тексту.
+- Per-element failures/avoid-list ведёт execute node (graph), не этот модуль.
 
 Settings Used
 -------------
-- paths.screenshots_dir, paths.state_dir; type_submit_fallback; scroll_step; hide_overlay; max_reobserve_attempts (passed by caller); max_attempts_per_element enforced in caller.
+- paths.screenshots_dir, paths.state_dir; type_submit_fallback; scroll_step; max_reobserve_attempts (передаётся извне).
 
 Integration Points
 ------------------
-- langgraph_loop execute_node wraps execute_with_fallbacks, saves ExecutionResult via save_execution_result, tracks avoid/fail counts and state changes.
+- node_execute отвечает за табы/context_events/records/UX и оборачивает execute_with_fallbacks + save_execution_result.

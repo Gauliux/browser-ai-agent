@@ -1,17 +1,17 @@
-Module: src/agent/state.py
-==========================
+Module: src/agent/legacy/state.py
+=================================
 
 Responsibility
 --------------
-- Lightweight state holder for legacy/custom loop (not used in LangGraph path, retained for completeness).
+- Простое хранилище наблюдений для legacy цикла (LangGraph его не использует).
 
 Components
 ----------
 - AgentState:
   - fields: max_observations (default 5), observations (list of Observation).
-  - add_observation(obs): append and keep only last max_observations.
-  - recent_observations(limit=3): return last N observations.
+  - add_observation(obs): append и обрезает до max_observations.
+  - recent_observations(limit=3): последние N наблюдений.
 
 Notes
 -----
-- Legacy loop (src/agent/loop.py) is frozen; primary execution uses LangGraph. AgentState remains as a simple ring buffer utility.
+- Legacy loop (src/agent/legacy/loop.py) заморожен; AgentState остаётся как ring buffer утилита.

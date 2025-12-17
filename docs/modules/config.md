@@ -1,9 +1,9 @@
-Module: src/agent/config.py
-===========================
+Module: src/agent/config/config.py
+==================================
 
 Responsibility
 --------------
-- Load environment variables (.env via dotenv if installed), clamp numeric values, set defaults, and build Settings dataclass.
+- Load environment variables (.env if available), clamp numeric values, set defaults, build Settings dataclass.
 - Resolve paths via Paths.from_env and ensure directories exist.
 
 Key Settings (see configuration.md for full list)
@@ -17,10 +17,10 @@ Key Settings (see configuration.md for full list)
 
 Notable Behavior
 ----------------
-- clamp_int helper ensures minimums (defaults, min_value).
-- Validates choice enums (planner_screenshot_mode, auto_done_mode, observe_screenshot_mode).
+- .env берётся из корня репозитория и загружается с override=True (приоритет: CLI → .env → env).
+- clamp_int гарантирует минимумы; enum поля нормализуются.
 - sync_viewport_with_window default false; hide_overlay default false.
 
 Outputs
 -------
-- Settings dataclass with all fields plus Paths object; directories ensured.
+- Settings dataclass с Paths; директории ensure().

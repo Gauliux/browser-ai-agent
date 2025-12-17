@@ -15,7 +15,7 @@ Key Behavior
 
 Interactions/Deps
 -----------------
-- Settings.load (config), BrowserRuntime (runtime), Planner (LLM), AgentLoop (legacy), langgraph_loop.build_graph (LangGraph), tracing.TextLogger/TraceLogger, AgentState (legacy), ui_shell.run_ui_shell.
+- Settings.load (config/config), BrowserRuntime (infra/runtime), Planner (core/planner), AgentLoop/AgentState (legacy), langgraph_loop.build_graph, TextLogger/TraceLogger (infra/tracing), ui_shell.run_ui_shell.
 
 CLI Flags
 ---------

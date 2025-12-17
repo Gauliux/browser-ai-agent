@@ -3,57 +3,50 @@ Agent Logic
 
 Stages (FSM)
 ------------
-- orient → context → locate → verify → done (monotonic promotion via goal_check).
-- goal_kind: object | list | action (from goal text) influences artifact detection.
-- Task mode: find/browse/answer/download (from goal) influences planner prompt (explore_mode, allowed actions).
+- orient → context → locate → verify → done (монотонно; goal_stage/goal_kind фиксированы).
+- goal_kind: object | list | action; task_mode (find/browse/answer/download) влияет на подсказки планеру (explore_mode, allowed_actions), но FSM не меняется.
 
 Terminals
 ---------
-- goal_satisfied — artifact detected (per goal_kind/stage).
-- goal_failed — insufficient_knowledge (no_progress/planner_calls/stage_not_advanced) or other failures.
-- loop_stuck — world frozen (URL/DOM/candidates) and budget exhausted (repeat/stagnation/auto_scrolls and/or no_progress budget).
-- budget_exhausted — max_steps or recursion_limit.
-Terminal metadata logged as terminal_reason/type; stop_reason preserved.
+- goal_satisfied, goal_failed (insufficient_knowledge/stage_not_advanced/budgets), loop_stuck, budget_exhausted. Набор фиксирован; terminal_reason/type нормализуются на выходе.
 
-LangGraph Flow
---------------
-1) observe: capture mapping (overlay optional), zone balancing, optional retries for sparse listings, store hashes (mapping, candidates), loop trigger via repeat/stagnation.
-2) loop_mitigation: optional conservative pass; paged_scan with mapping_boost until max_auto_scrolls.
-3) goal_check: artifact detection, stage promotion, terminals (goal_satisfied/failed/loop_stuck/budget_exhausted), page_type classification.
-4) planner: LLM call with strict schema; context includes goal/stage, page_type, listing_detected, explore_mode, avoid_search, search_no_change, allowed_actions, candidates, errors, loop flags, attempts. Disallowed actions (incl. meta on early stages) → planner_disallowed_action → error_retry.
-5) safety: heuristics check, potential confirmation.
-6) confirm: prompt/auto-confirm for destructive actions.
-7) execute: executes action with fallbacks, per-element limits, TargetClosed retry, updates state_change (URL/DOM), avoid list. Meta actions blocked on early stages.
-8) progress: progress score/evidence; auto_done if allowed; ask_user (interactive if enabled, else terminal) only on later stages; repeat/no_progress counters updated.
-9) ask_user: interactive confirmation if enabled; non-interactive records stop_reason without blocking.
-10) error_retry: one retry after planner/execute errors/timeouts/disallowed action.
+Graph Flow
+----------
+1) observe: захват Observation (Set-of-Mark), overlay опционален, goal-aware добор элементов для sparse listing; mapping_hash/candidate_hash; loop_trigger через repeat/stagnation; сохраняет tabs метаданные, active_tab_id, tab_events, context_events.
+2) loop_mitigation: conservative_pass (если включено) и paged_scan с mapping_boost до max_auto_scrolls.
+3) goal_check: артефакт-детекция и stage promotion; terminals (goal_satisfied/failed/loop_stuck/budget_exhausted); page_type классификация.
+4) planner: строит контекст (goal/stage/kind, page_type, listing_detected, explore_mode, allowed_actions incl. switch_tab, avoid_search/search_no_change, candidates с is_disabled, search_controls, state_change_hint, loop/error/attempts, tabs/active_tab_id); вызывает planner.plan с таймаутом; planner_disallowed_action → error_retry.
+5) safety: analyze_action (включая navigate/search/go_back/go_forward) на риск; может требовать confirm.
+6) confirm: prompt/auto_confirm для требующих подтверждения.
+7) execute: исполняет действие с фолбэками (reobserve+scroll wiggle → JS click → text-match); учитывает switch_tab, контекстные события (url_changed/dom_changed/tab open), обновляет visited/avoid/attempts; сохраняет records и UX.
+8) progress: считает score/evidence, page_type, auto_done (по stage/настройкам), ask_user только на поздних стадиях; обновляет repeat/no_progress/planner_calls/step.
+9) ask_user: интерактивно (если INTERACTIVE_PROMPTS) или мгновенная запись stop_reason.
+10) error_retry: один повтор после planner/execute ошибок/таймаутов/disallowed.
 
 Observation & Mapping
 ---------------------
-- Set-of-Mark JS annotates interactive elements, adds data-agent-id, captures tag/text/role/zone/bbox/fixed/nav/disabled/attr name/id/aria.
-- Zone balancing (top/mid/bottom), nav/fixed deprioritized, goal-aware candidate extraction.
-- Optional overlay badges (hidden via flag), optional viewport sync, optional screenshot (observe_screenshot_mode).
+- JS Set-of-Mark: tag/text/role/zone/bbox/fixed/nav/is_disabled/attr_name/id/aria; data-agent-id; overlay номера опциональны.
+- Zone балансировка, goal-aware candidate extraction, viewport sync опционален, скрины по observe_screenshot_mode.
 
 Planning
 --------
-- Action schema: click | type | scroll | screenshot | navigate | search | go_back | go_forward | switch_tab | done | ask_user.
-- Context: mapping (capped/dynamic), recent obs, loop/error/attempts, avoid_elements, allowed_actions, explore/listing flags, search_controls, state_change_hint, candidates.
-- Validation: jsonschema; disallowed actions by stage rejected to error_retry.
+- Actions: click | type | scroll | screenshot | navigate | search | go_back | go_forward | switch_tab | done | ask_user.
+- Контекст включает последние наблюдения, loop/error/attempts, avoid_elements, candidates (с is_disabled), tabs/active_tab_id и tab events, intent_text/history (читается только для UX, не в логике), state_change_hint, progress/no-progress.
+- Валидация: jsonschema; мета-действия ограничены ранними стадиями (как было).
 
 Execution
 ---------
-- Actions mapped to Playwright: navigate/goto, search via keyboard (or Ctrl+L fallback), history nav, scroll, click/type (fill), screenshot.
-- Fallbacks: reobserve with alternating scroll → JS click → text-match click; per-element fail counts to avoid.
-- Artifacts: exec JSON and screenshots labeled with session/step.
+- Отрабатывает все actions, включая switch_tab как first-class (не считается failure); navigation/search/history/scroll, click/type, screenshot.
+- Фолбэки: reobserve + scroll wiggle, JS click, text-match click; per-element fail counts → avoid_elements.
+- Контекстные события: url_changed/dom_changed, tab open/activate, intent записывается в intent_history, UX-лог append_ux.
 
 Loop/No-progress Handling
 -------------------------
 - repeat_count (action+element+URL), stagnation_count (mapping hash), auto_scrolls_used, no_progress_steps, planner_calls.
-- world_frozen check (URL/DOM/candidate hashes) gates loop_stuck.
-- loop_mitigation adds paged_scan + mapping boost; conservative observe option.
+- world_frozen (URL/DOM/candidate hashes) для loop_stuck; loop_mitigation добавляет paged_scan + conservative observe.
 
 Progress & Stopping
 -------------------
-- progress score: url/title/keywords/goal_hits/last_action target; page_type heuristic (listing/detail).
-- auto_done only on later stages; ask_user gated by stage and INTERACTIVE_PROMPTS.
-- Terminals enforced: every run ends with terminal_reason/type logged.
+- progress_score: url/title/keywords/goal_hits/last_action target; page_type heuristic (listing/detail).
+- auto_done работает только на поздних стадиях; ask_user/interactive опционален.
+- Каждый запуск завершает terminal_reason/type; recursion_limit защищает от бесконечных циклов.

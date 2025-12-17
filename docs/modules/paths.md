@@ -1,16 +1,16 @@
-Module: src/agent/paths.py
-==========================
+Module: src/agent/infra/paths.py
+=================================
 
 Responsibility
 --------------
-- Resolve filesystem paths for data/logs based on project root and env overrides.
-- Ensure directories exist.
+- Resolve data/log directories from environment overrides and repo root.
+- Ensure runtime folders exist.
 
-Key Structures
---------------
-- Paths dataclass: root, user_data_dir, screenshots_dir, state_dir, logs_dir.
+Key Behavior
+------------
+- from_env(root): supports USER_DATA_DIR, SCREENSHOTS_DIR, STATE_DIR, LOGS_DIR.
+- ensure(): creates all folders (parents=True, exist_ok=True).
 
-Behavior
---------
-- from_env(root): builds paths; supports USER_DATA_DIR, SCREENSHOTS_DIR, STATE_DIR, LOGS_DIR overrides; defaults under <root>/data and <root>/logs.
-- ensure(): creates all directories.
+Used By
+-------
+- config/config.py during Settings.load().

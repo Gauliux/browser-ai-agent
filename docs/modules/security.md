@@ -1,26 +1,27 @@
-Module: src/agent/security.py
-=============================
+Module: src/agent/core/security.py
+==================================
 
 Responsibility
 --------------
-- Evaluate proposed action for potential destructiveness and decide on confirmation.
+- Оценить предлагаемое действие на потенциальную разрушительность и решить, нужно ли подтверждение.
 
 Key Components
 --------------
 - SecurityDecision: requires_confirmation (bool), reason (optional).
-- Destructive heuristics: regex keywords (pay/buy/checkout/order/confirm payment/card/cvv/delete/remove/unsubscribe/transfer/ssn/bank account), card-like number pattern, sensitive forms (name/id/aria-label containing card/cc/cvv/billing/payment/ssn/passport/account/email), risky navigation (SENSITIVE_PATHS, RISKY_DOMAINS env lists).
-- _get_element_text: fetch text/role/tag by element_id from observation.
-- _has_sensitive_form: scan mapping for sensitive form controls.
+- Heuristics: ключевые слова (pay/buy/checkout/order/.../delete/remove/unsubscribe/transfer), card-like number pattern,
+  чувствительные формы (name/id/aria-label), risky navigation (SENSITIVE_PATHS, RISKY_DOMAINS).
+- _get_element_text: извлекает текст/role/tag по element_id из observation.
+- _has_sensitive_form: сканирует mapping на “payment/account” формы.
 
 Behavior
 --------
 - analyze_action(action, observation):
-  - Meta actions (ask_user/done/navigate/go_back/go_forward/search) → non-destructive by default (navigate still checked for risky domains/paths).
-  - Keyword match or card pattern or sensitive form → requires_confirmation True with reason.
-  - Otherwise respect action.requires_confirmation flag.
-- prompt_confirmation(action, reason, auto_confirm=False): prints reason/action; auto_confirm bypasses prompt; otherwise asks user.
+  - Навигационные действия (navigate/search/go_back/go_forward) проходят риск-оценку наравне с кликами/типингом.
+  - Keyword/card/form/risky URL → requires_confirmation=True с reason.
+  - Иначе respects action.requires_confirmation flag (если задан).
+- prompt_confirmation(action, reason, auto_confirm=False): печатает reason/action; auto_confirm bypass; иначе спрашивает пользователя.
 
 Settings/Env
 ------------
-- SENSITIVE_PATHS (default payment,checkout,billing,account/close,delete,unsubscribe), RISKY_DOMAINS (paypal,stripe,bank,billing,secure).
-- auto_confirm flag handled by callers.
+- SENSITIVE_PATHS (default: payment,checkout,billing,account/close,delete,unsubscribe)
+- RISKY_DOMAINS (default: paypal,stripe,bank,billing,secure)
