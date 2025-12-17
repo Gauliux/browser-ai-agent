@@ -68,7 +68,7 @@ class BrowserRuntime:
         self.set_active_page(page)
         print(f"[runtime] New page detected: {page.url}")
 
-    def get_pages_meta(self) -> list[dict[str, str]]:
+    async def get_pages_meta(self) -> list[dict[str, str]]:
         pages = []
         if not self._context:
             return pages
@@ -77,8 +77,9 @@ class BrowserRuntime:
                 pages.append(
                     {
                         "index": str(idx),
+                        "id": getattr(p, "guid", None),  # type: ignore[attr-defined]
                         "url": p.url,
-                        "title": p.title(),
+                        "title": await p.title(),
                         "is_closed": str(p.is_closed()),
                         "active": str(self._page == p),
                     }
@@ -86,6 +87,25 @@ class BrowserRuntime:
             except Exception:
                 continue
         return pages
+
+    def get_active_page_id(self) -> Optional[str]:
+        return self._active_page_id
+
+    def get_tab_ids(self) -> list[str]:
+        """Return best-effort list of alive tab ids (guids if available)."""
+        ids: list[str] = []
+        if not self._context:
+            return ids
+        for p in self._context.pages:
+            if p.is_closed():
+                continue
+            guid = getattr(p, "guid", None)  # type: ignore[attr-defined]
+            if guid:
+                ids.append(str(guid))
+            else:
+                # fallback to object id string to at least have a stable placeholder
+                ids.append(str(id(p)))
+        return ids
 
     async def set_active_page_by_hint(self, *, url_substr: str | None = None, title_substr: str | None = None, index: int | None = None) -> Optional[Page]:
         if not self._context:

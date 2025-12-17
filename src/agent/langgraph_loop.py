@@ -96,6 +96,9 @@ class GraphState(TypedDict, total=False):
     terminal_reason: Optional[str]
     terminal_type: Optional[str]
     goal_stage: str
+    tabs: List[Dict[str, Any]]
+    active_tab_id: Optional[str]
+    tab_events: List[Dict[str, Any]]
 
 
 def _mapping_hash(obs: Optional[Observation]) -> Optional[int]:
@@ -599,6 +602,9 @@ def build_graph(
             evidence.append("goal_tokens_in_url_title")
             evidence.append(f"mapping_hits={mapping_goal_hits}")
 
+        tabs_snapshot = await runtime.get_pages_meta()
+        active_tab_id = runtime.get_active_page_id()
+
         new_state = {
             **state,
             "prev_observation": state.get("observation"),
@@ -612,6 +618,8 @@ def build_graph(
             "candidate_elements": candidates,
             "prev_candidate_hash": state.get("candidate_hash"),
             "candidate_hash": _candidate_hash(candidates),
+            "tabs": tabs_snapshot,
+            "active_tab_id": active_tab_id,
         }
         if goal_satisfied:
             new_state["stop_reason"] = "goal_satisfied"
@@ -1053,6 +1061,10 @@ def build_graph(
             raise RuntimeError("Execute node missing observation or planner result")
 
         action = planner_result.action
+        tabs_before = await runtime.get_pages_meta()
+        tab_ids_before = {
+            str(t.get("id") or f"idx:{t.get('index')}" or "") for t in tabs_before if (t.get("id") or t.get("index"))
+        }
         step_id = generate_step_id(f"{state['session_id']}-step{state.get('step', 0)}")
         exec_result_path = None
         exec_result: Optional[ExecutionResult] = None
@@ -1060,6 +1072,21 @@ def build_graph(
         exec_error: Optional[str] = None
         new_obs = observation
         obs_before = observation
+
+        def _tab_events(after_tabs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+            after_ids = {str(t.get("id") or f"idx:{t.get('index')}" or "") for t in after_tabs if (t.get("id") or t.get("index"))}
+            new_ids = [tid for tid in after_ids if tid and tid not in tab_ids_before]
+            if not new_ids:
+                return []
+            new_tabs = [t for t in after_tabs if str(t.get("id") or f"idx:{t.get('index')}" or "") in new_ids]
+            return [
+                {
+                    "type": "new_tab",
+                    "tabs": new_tabs,
+                    "action": action.get("action"),
+                    "value": action.get("value"),
+                }
+            ]
 
         if action.get("action") == "switch_tab":
             hint_val = action.get("value")
@@ -1096,6 +1123,9 @@ def build_graph(
                 screenshot_path=None,
                 recorded_at=datetime.now(timezone.utc).isoformat(),
             )
+            tabs_after = await runtime.get_pages_meta()
+            active_tab_id = runtime.get_active_page_id()
+            tab_events = (state.get("tab_events") or []) + _tab_events(tabs_after)
             exec_result_path = save_execution_result(
                 exec_result,
                 settings.paths.state_dir,
@@ -1126,6 +1156,9 @@ def build_graph(
                 "loop_trigger_sig": state.get("loop_trigger_sig"),
                 "attempts_per_element": state.get("exec_fail_counts", {}),
                 "max_attempts_per_element": settings.max_attempts_per_element,
+                "tabs": tabs_after,
+                "active_tab_id": active_tab_id,
+                "tab_events": tab_events[-3:] if tab_events else [],
             }
             records = state.get("records", [])
             records.append(record)
@@ -1164,6 +1197,9 @@ def build_graph(
                 "recent_observations": (state.get("recent_observations", []) + ([new_obs] if new_obs else []))[-3:],
                 "action_history": action_history,
                 "observation": new_obs,
+                "tabs": tabs_after,
+                "active_tab_id": active_tab_id,
+                "tab_events": tab_events,
             }
 
         # Meta actions: stop immediately with reason (navigate executes normally).
@@ -1324,6 +1360,9 @@ def build_graph(
         dom_changed = bool(_mapping_hash(obs_before) != _mapping_hash(observation)) if obs_before and observation else False
         state["last_state_change"] = {"url_changed": url_changed, "dom_changed": dom_changed}
         state["last_action_no_effect"] = not url_changed and not dom_changed
+        tabs_after = await runtime.get_pages_meta()
+        active_tab_id = runtime.get_active_page_id()
+        tab_events = (state.get("tab_events") or []) + _tab_events(tabs_after)
 
         record = {
             "step": state.get("step", 0),
@@ -1344,6 +1383,9 @@ def build_graph(
             "loop_trigger_sig": state.get("loop_trigger_sig"),
             "attempts_per_element": state.get("exec_fail_counts", {}),
             "max_attempts_per_element": settings.max_attempts_per_element,
+            "tabs": tabs_after,
+            "active_tab_id": active_tab_id,
+            "tab_events": tab_events[-3:] if tab_events else [],
         }
 
         records = state.get("records", [])
@@ -1376,6 +1418,9 @@ def build_graph(
             "last_error_context": exec_error if exec_success is False else None,
             "action_history": action_history,
             "recent_observations": list((state.get("recent_observations") or [])[-2:]) + ([observation] if observation else []),
+            "tabs": tabs_after,
+            "active_tab_id": active_tab_id,
+            "tab_events": tab_events,
         }
 
     async def progress_node(state: GraphState) -> GraphState:
@@ -1701,6 +1746,9 @@ def build_graph(
             "progress_steps": 0,
             "no_progress_steps": 0,
             "planner_calls": 0,
+            "tabs": [],
+            "tab_events": [],
+            "active_tab_id": runtime.get_active_page_id(),
         }
         try:
             result = await graph.ainvoke(initial_state, config=graph_config)
