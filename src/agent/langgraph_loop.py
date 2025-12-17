@@ -100,6 +100,9 @@ class GraphState(TypedDict, total=False):
     active_tab_id: Optional[str]
     tab_events: List[Dict[str, Any]]
     context_events: List[Dict[str, Any]]
+    intent_text: Optional[str]
+    intent_history: List[Dict[str, Any]]
+    ux_messages: List[str]
 
 
 def _mapping_hash(obs: Optional[Observation]) -> Optional[int]:
@@ -523,6 +526,16 @@ def build_graph(
     workflow = StateGraph(GraphState)
     graph_config = {"recursion_limit": max(settings.max_steps + 20, 50)}
 
+    def _append_ux(state: GraphState, message: str) -> List[str]:
+        stamped = f"{datetime.now(timezone.utc).isoformat()} | {message}"
+        try:
+            text_log.write(stamped)
+        except Exception:
+            pass
+        msgs = list(state.get("ux_messages") or [])
+        msgs.append(stamped)
+        return msgs[-30:]
+
     async def observe_node(state: GraphState) -> GraphState:
         # Hard guard: limit check handled in run/goal_check; no stop here.
         page = await runtime.ensure_page()
@@ -912,11 +925,16 @@ def build_graph(
         # Try high-confidence commit (skip planner) if obvious action present.
         commit_action = _pick_committed_action(state.get("candidate_elements", []), observation, state)
         if commit_action:
+            ux_messages = _append_ux(
+                state,
+                f"plan: commit action={commit_action.get('action')} el={commit_action.get('element_id')} reason={commit_action.get('reason')}",
+            )
             return {
                 **state,
                 "planner_result": PlannerResult(action=commit_action, raw_response={}, retries_used=0),
                 "goal_stage": goal_stage,
                 "terminal_reason": None,
+                "ux_messages": ux_messages,
             }
         try:
             planner_result = await asyncio.wait_for(
@@ -1035,7 +1053,33 @@ def build_graph(
                 "stop_reason": "planner_error",
                 "stop_details": str(exc),
             }
-        return {**state, "observation": observation, "planner_result": planner_result}
+        intent_text = (
+            f"step={state.get('step', 0)} intent: {planner_result.action.get('action')} "
+            f"el={planner_result.action.get('element_id')} val={planner_result.action.get('value')} "
+            f"reason={planner_result.action.get('reason') or 'planner_decision'} stage={goal_stage}"
+        )
+        intent_history = list(state.get("intent_history") or [])
+        intent_history.append(
+            {
+                "step": state.get("step", 0),
+                "action": planner_result.action.get("action"),
+                "element_id": planner_result.action.get("element_id"),
+                "value": planner_result.action.get("value"),
+                "reason": planner_result.action.get("reason"),
+                "goal_stage": goal_stage,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            }
+        )
+        intent_history = intent_history[-10:]
+        ux_messages = _append_ux(state, f"plan: {intent_text}")
+        return {
+            **state,
+            "observation": observation,
+            "planner_result": planner_result,
+            "intent_text": intent_text,
+            "intent_history": intent_history,
+            "ux_messages": ux_messages,
+        }
 
     async def safety_node(state: GraphState) -> GraphState:
         observation = state["observation"]
@@ -1139,6 +1183,10 @@ def build_graph(
             dom_changed = bool(_mapping_hash(obs_before) != _mapping_hash(new_obs)) if obs_before and new_obs else False
             state["last_state_change"] = {"url_changed": url_changed, "dom_changed": dom_changed}
             state["last_action_no_effect"] = False
+            ux_messages = _append_ux(
+                state,
+                f"execute: switch_tab hint={action.get('value')} url_changed={url_changed} dom_changed={dom_changed}",
+            )
             record = {
                 "step": state.get("step", 0),
                 "session_id": state["session_id"],
@@ -1161,6 +1209,9 @@ def build_graph(
                 "tabs": tabs_after,
                 "active_tab_id": active_tab_id,
                 "tab_events": tab_events[-3:] if tab_events else [],
+                "intent": state.get("intent_text"),
+                "intent_history": (state.get("intent_history") or [])[-3:],
+                "ux_messages": ux_messages[-3:] if ux_messages else [],
             }
             records = state.get("records", [])
             records.append(record)
@@ -1202,6 +1253,10 @@ def build_graph(
                 "tabs": tabs_after,
                 "active_tab_id": active_tab_id,
                 "tab_events": tab_events,
+                "context_events": context_events,
+                "intent_text": state.get("intent_text"),
+                "intent_history": state.get("intent_history"),
+                "ux_messages": ux_messages,
             }
 
         # Meta actions: stop immediately with reason (navigate executes normally).
@@ -1391,6 +1446,11 @@ def build_graph(
             context_events.append(event)
             context_events = context_events[-10:]
 
+        ux_messages = _append_ux(
+            state,
+            f"execute: {action.get('action')} success={exec_success} url_changed={url_changed} dom_changed={dom_changed}",
+        )
+
         record = {
             "step": state.get("step", 0),
             "session_id": state["session_id"],
@@ -1414,6 +1474,9 @@ def build_graph(
             "active_tab_id": active_tab_id,
             "tab_events": tab_events[-3:] if tab_events else [],
             "context_events": context_events[-3:] if context_events else [],
+            "intent": state.get("intent_text"),
+            "intent_history": (state.get("intent_history") or [])[-3:],
+            "ux_messages": ux_messages[-3:] if ux_messages else [],
         }
 
         records = state.get("records", [])
@@ -1450,6 +1513,7 @@ def build_graph(
             "active_tab_id": active_tab_id,
             "tab_events": tab_events,
             "context_events": context_events,
+            "ux_messages": ux_messages,
         }
 
     async def progress_node(state: GraphState) -> GraphState:
@@ -1778,6 +1842,9 @@ def build_graph(
             "tabs": [],
             "tab_events": [],
             "active_tab_id": runtime.get_active_page_id(),
+            "intent_text": None,
+            "intent_history": [],
+            "ux_messages": [],
         }
         try:
             result = await graph.ainvoke(initial_state, config=graph_config)
