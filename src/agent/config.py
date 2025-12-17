@@ -54,8 +54,9 @@ class Settings:
 
     @classmethod
     def load(cls) -> "Settings":
-        load_dotenv()
         root = Path(__file__).resolve().parent.parent
+        # Prefer .env over existing environment variables for this process.
+        load_dotenv(root / ".env", override=True)
         paths = Paths.from_env(root)
         paths.ensure()
 
