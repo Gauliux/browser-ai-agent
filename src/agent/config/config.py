@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
-from agent.paths import Paths
+from agent.infra.paths import Paths
 
 try:
     from dotenv import load_dotenv
@@ -54,8 +54,8 @@ class Settings:
 
     @classmethod
     def load(cls) -> "Settings":
-        root = Path(__file__).resolve().parent.parent
-        # Prefer .env over existing environment variables for this process.
+        # Project root (…/agent) so .env at repo root is loaded before env vars.
+        root = Path(__file__).resolve().parents[3]
         load_dotenv(root / ".env", override=True)
         paths = Paths.from_env(root)
         paths.ensure()

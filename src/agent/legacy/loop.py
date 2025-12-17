@@ -6,14 +6,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
-from agent.config import Settings
-from agent.observe import capture_observation, Observation
-from agent.execute import execute_with_fallbacks, save_execution_result
-from agent.runtime import BrowserRuntime
-from agent.planner import Planner
-from agent.security import SecurityDecision, analyze_action, prompt_confirmation
-from agent.state import AgentState
-from agent.tracing import TextLogger, TraceLogger, generate_step_id
+from agent.config.config import Settings
+from agent.core.observe import capture_observation, Observation
+from agent.core.execute import execute_with_fallbacks, save_execution_result
+from agent.infra.runtime import BrowserRuntime
+from agent.core.planner import Planner
+from agent.core.security import SecurityDecision, analyze_action, prompt_confirmation
+from agent.legacy.state import AgentState
+from agent.infra.tracing import TextLogger, TraceLogger, generate_step_id
 
 
 @dataclass

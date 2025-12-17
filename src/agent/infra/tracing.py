@@ -6,7 +6,7 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
-from agent.observe import Observation
+from agent.core.observe import Observation
 
 
 def generate_step_id(prefix: str) -> str:

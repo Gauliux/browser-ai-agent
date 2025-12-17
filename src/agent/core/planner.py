@@ -10,7 +10,7 @@ from typing import Any, Dict, List, Optional
 from jsonschema import Draft7Validator
 from openai import AsyncOpenAI
 
-from agent.observe import Observation
+from agent.core.observe import Observation
 
 
 BROWSER_ACTION_SCHEMA: Dict[str, Any] = {

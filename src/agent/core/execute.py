@@ -9,8 +9,8 @@ from typing import Any, Dict, Optional, Tuple
 
 from playwright.async_api import Page
 
-from agent.config import Settings
-from agent.observe import Observation, capture_observation
+from agent.config.config import Settings
+from agent.core.observe import Observation, capture_observation
 
 
 @dataclass

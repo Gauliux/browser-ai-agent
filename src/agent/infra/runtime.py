@@ -5,7 +5,7 @@ from typing import Optional
 
 from playwright.async_api import BrowserContext, Page, Playwright, async_playwright
 
-from agent.config import Settings
+from agent.config.config import Settings
 
 
 class BrowserRuntime:

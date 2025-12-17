@@ -9,7 +9,7 @@ import re
 
 from playwright.async_api import Page
 
-from agent.config import Settings
+from agent.config.config import Settings
 
 JS_SET_OF_MARK = r"""
 ({ maxElements = 30, viewports = 1, hideOverlay = false } = {}) => {

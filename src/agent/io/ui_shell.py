@@ -4,8 +4,8 @@ import sys
 from dataclasses import replace
 from typing import Any, Awaitable, Callable, Optional
 
-from agent.config import Settings
-from agent.tracing import TextLogger, TraceLogger
+from agent.config.config import Settings
+from agent.infra.tracing import TextLogger, TraceLogger
 
 
 Runner = Callable[..., Awaitable[dict[str, Any]]]

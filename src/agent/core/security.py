@@ -5,7 +5,7 @@ import os
 from dataclasses import dataclass
 from typing import Any, Dict, Optional, Tuple
 
-from agent.observe import Observation
+from agent.core.observe import Observation
 
 
 _DESTRUCTIVE_KEYWORDS = re.compile(

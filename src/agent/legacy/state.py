@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import List
 
-from agent.observe import Observation
+from agent.core.observe import Observation
 
 
 @dataclass

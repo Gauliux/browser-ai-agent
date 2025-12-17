@@ -4,12 +4,12 @@ import os
 import shutil
 from dataclasses import replace
 
-from agent.config import Settings
-from agent.loop import AgentLoop
-from agent.planner import Planner
-from agent.runtime import BrowserRuntime
-from agent.state import AgentState
-from agent.ui_shell import run_ui_shell
+from agent.config.config import Settings
+from agent.core.planner import Planner
+from agent.infra.runtime import BrowserRuntime
+from agent.io.ui_shell import run_ui_shell
+from agent.legacy.loop import AgentLoop
+from agent.legacy.state import AgentState
 
 
 async def amain() -> None:
@@ -198,7 +198,7 @@ async def amain() -> None:
             if use_langgraph:
                 try:
                     from agent.langgraph_loop import build_graph
-                    from agent.tracing import TextLogger, TraceLogger
+                    from agent.infra.tracing import TextLogger, TraceLogger
 
                     text_log = TextLogger(active_settings.paths.logs_dir / "agent.log")
                     trace = TraceLogger(active_settings.paths.logs_dir / "trace.jsonl")
@@ -258,7 +258,7 @@ async def amain() -> None:
                     text_log = None
                     trace = None
                     try:
-                        from agent.tracing import TextLogger, TraceLogger
+                        from agent.infra.tracing import TextLogger, TraceLogger
 
                         text_log = TextLogger(active_settings.paths.logs_dir / "agent.log")
                         trace = TraceLogger(active_settings.paths.logs_dir / "trace.jsonl")
