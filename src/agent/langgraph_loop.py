@@ -99,6 +99,7 @@ class GraphState(TypedDict, total=False):
     tabs: List[Dict[str, Any]]
     active_tab_id: Optional[str]
     tab_events: List[Dict[str, Any]]
+    context_events: List[Dict[str, Any]]
 
 
 def _mapping_hash(obs: Optional[Observation]) -> Optional[int]:
@@ -1065,6 +1066,7 @@ def build_graph(
         tab_ids_before = {
             str(t.get("id") or f"idx:{t.get('index')}" or "") for t in tabs_before if (t.get("id") or t.get("index"))
         }
+        context_events = list(state.get("context_events") or [])
         step_id = generate_step_id(f"{state['session_id']}-step{state.get('step', 0)}")
         exec_result_path = None
         exec_result: Optional[ExecutionResult] = None
@@ -1363,6 +1365,31 @@ def build_graph(
         tabs_after = await runtime.get_pages_meta()
         active_tab_id = runtime.get_active_page_id()
         tab_events = (state.get("tab_events") or []) + _tab_events(tabs_after)
+        context_events = list(state.get("context_events") or [])
+        if url_changed or dom_changed or tab_events:
+            reason = "redirect"
+            if action.get("action") in {"navigate", "search"}:
+                reason = f"action_{action.get('action')}"
+            elif action.get("action") in {"go_back", "go_forward"}:
+                reason = "action_history_nav"
+            elif action.get("action") == "click":
+                reason = "action_click"
+            elif action.get("action") == "switch_tab":
+                reason = "action_switch_tab"
+            event = {
+                "type": "context_change",
+                "reason": reason,
+                "before_url": obs_before.url if obs_before else None,
+                "after_url": observation.url if observation else None,
+                "url_changed": url_changed,
+                "dom_changed": dom_changed,
+                "tab_events": tab_events[-1:] if tab_events else [],
+                "action": action.get("action"),
+                "value": action.get("value"),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            }
+            context_events.append(event)
+            context_events = context_events[-10:]
 
         record = {
             "step": state.get("step", 0),
@@ -1386,6 +1413,7 @@ def build_graph(
             "tabs": tabs_after,
             "active_tab_id": active_tab_id,
             "tab_events": tab_events[-3:] if tab_events else [],
+            "context_events": context_events[-3:] if context_events else [],
         }
 
         records = state.get("records", [])
@@ -1421,6 +1449,7 @@ def build_graph(
             "tabs": tabs_after,
             "active_tab_id": active_tab_id,
             "tab_events": tab_events,
+            "context_events": context_events,
         }
 
     async def progress_node(state: GraphState) -> GraphState:
