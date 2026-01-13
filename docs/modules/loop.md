@@ -3,10 +3,10 @@ Module: src/agent/legacy/loop.py
 
 Responsibility
 --------------
-- Legacy custom loop implementation (Observe → Planner → Security → Execute → Progress) до LangGraph.
-- Сохранён для fallback/debug; не развивается.
+- Legacy custom loop implementation (Observe → Planner → Security → Execute → Progress) predating LangGraph.
+- Kept for fallback/debug; not under active development.
 
 Notes
 -----
-- Современный поток использует LangGraph (src/agent/langgraph_loop.py). Legacy лишён новых инвариантов (терминалы, stage-based ограничения, loop mitigation улучшений).
-- main.py может откатиться к legacy если LangGraph не инициализируется (редко).
+- Modern flow uses LangGraph (src/agent/langgraph_loop.py). Legacy lacks newer invariants (terminals, stage-based constraints, loop mitigation improvements).
+- main.py may fall back to legacy if LangGraph fails to initialize (rare).

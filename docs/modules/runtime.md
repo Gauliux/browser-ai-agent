@@ -24,4 +24,4 @@ Settings Used
 Integration Points
 ------------------
 - langgraph observe/execute nodes call ensure_page, get_pages_meta.
-- Switch-tab actions rely on set_active_page and tabs metadata to avoid treating tab switches как ошибки.
+- Switch-tab actions rely on set_active_page and tabs metadata to avoid treating tab switches as errors.

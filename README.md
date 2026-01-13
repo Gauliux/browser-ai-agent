@@ -1,14 +1,10 @@
 Browser LangGraph Agent
 =======================
+A headful, persistent Playwright + OpenAI (function-calling) agent orchestrated by LangGraph. It observes pages via a DOM Set-of-Mark overlay, plans with a strict tool schema, executes actions with resilient fallbacks, and logs artifacts (JSON + screenshots + traces). Focus is on a universal strategy-driven agent (Plan B), not site-specific logic.
 
 Demo
 ----
-
 <img src="demo.gif" alt="UwU gif demo OwO">
-
-Overview
---------
-A headful, persistent Playwright + OpenAI (function-calling) agent orchestrated by LangGraph. It observes pages via a DOM Set-of-Mark overlay, plans with a strict tool schema, executes actions with resilient fallbacks, and logs artifacts (JSON + screenshots + traces). Focus is on a universal strategy-driven agent (Plan B), not site-specific logic.
 
 Tech Stack
 ----------
@@ -18,26 +14,60 @@ Tech Stack
 - LangGraph (graph orchestration)
 - jsonschema, python-dotenv
 
-Current State / Characteristics
--------------------------------
-- Primary loop: LangGraph; legacy custom loop remains only as a fallback.
-- Fixed FSM stages: orient → context → locate → verify → done.
-- Fixed terminals: goal_satisfied, goal_failed, loop_stuck, budget_exhausted.
-- No automated tab selection (switch_tab is explicit). Page type heuristic is listing/detail only. No automated tests/mock pages yet.
+Documentation Roadmap
+---------------------
+- Quick start: [docs/setup.md](/docs/setup.md) (install/run) → [docs/configuration.md](/docs/configuration.md) (env/CLI reference).
+- System overview: [docs/architecture.md](/docs/architecture.md) (components/flows) and [docs/structure.md](/docs/structure.md) (repo layout).
+- Behavior specifics: [docs/agent_logic.md](/docs/agent_logic.md) (FSM, flow), [docs/browser_integration.md](/docs/browser_integration.md) (Playwright + Set-of-Mark), [docs/llm_handoff.md](/docs/llm_handoff.md) (planner contract), [docs/logging_artifacts.md](/docs/logging_artifacts.md) (what gets stored).
+- Module internals: see `docs/modules/`—start with [langgraph_loop.md](/docs/modules/langgraph_loop.md) (graph wiring), then [observe.md](/docs/modules/observe.md), [planner.md](/docs/modules/planner.md), [execute.md](/docs/modules/execute.md), [loop.md](/docs/modules/loop.md) (legacy context), [runtime.md](/docs/modules/runtime.md) (browser lifecycle), [security.md](/docs/modules/security.md), [capture.md](/docs/modules/capture.md), [graph_state.md](/docs/modules/graph_state.md), [graph_orchestrator.md](/docs/modules/graph_orchestrator.md), [ui_shell.md](/docs/modules/ui_shell.md), [ux_narration.md](/docs/modules/ux_narration.md), [termination_normalizer.md](/docs/modules/termination_normalizer.md), [state.md](/docs/modules/state.md) (legacy state buffer).
+- Limits and future work: [docs/limitations_todo.md](/docs/limitations_todo.md) (current gaps) and [docs/rationale.md](/docs/rationale.md) (design trade-offs).
+- Plan B concept (architecture RFC): [docs/plan_b.md](/docs/plan_b.md) for the StrategyProfile idea (declarative, no DOM logic).
 
-Execution Cycle (LangGraph)
----------------------------
-1) observe: capture DOM mapping (Set-of-Mark), optional screenshot, loop/stagnation detection, tab metadata.  
-2) loop_mitigation: conservative observe (optional) and paged_scan with mapping boost.  
-3) goal_check: stage promotion, artifact hints, terminal checks (budget/loop/goal).  
-4) planner: build rich context (goal/stage/page_type/tabs/candidates/errors/loop), call OpenAI tool schema.  
-5) safety: heuristic risk check (keywords, cards, risky domains/paths).  
-6) confirm: user/auto confirm if required.  
-7) execute: perform action with fallbacks (reobserve+scroll wiggle → JS click → text-match), handle switch_tab, record context events.  
-8) progress: score evidence, auto_done/ask_user per settings/stage, update counters.  
-9) ask_user: interactive only if INTERACTIVE_PROMPTS=true; otherwise auto-stop reason.  
-10) error_retry: one retry after planner/execute errors/timeouts/disallowed.  
-Flow: START → observe → (loop_mitigation?) → goal_check → planner → safety → confirm → execute → progress → ask_user → observe/END.
+How it works now
+----------------
+- Defaults: LangGraph loop is always used; legacy loop is a fallback only if LangGraph fails to initialize. Execution is enabled by default; `--plan-only` turns actions off.
+- FSM/terminals: stages orient → context → locate → verify → done; terminals are fixed (goal_satisfied, goal_failed, loop_stuck, budget_exhausted).
+- Tabs/page types: no auto tab switching (only switch_tab action); page type heuristic is listing/detail; no automated tests/mock pages yet.
+- Cycle (LangGraph nodes):
+  1) observe (node_observe/observe.py): capture DOM mapping (Set-of-Mark), optional screenshot, hashes for loop/stagnation, tab metadata.
+  2) loop_mitigation (node_loop_mitigation): optional conservative observe, then paged_scan with mapping boost up to max_auto_scrolls.
+  3) goal_check (node_goal_check): stage promotion, artifact hints, terminal checks (budget/loop/goal), page_type heuristic.
+  4) planner (node_planner/planner.py): build rich context (goal/stage/page_type/tabs/candidates/errors/loop) and call OpenAI tool schema.
+  5) safety (node_safety/security.py): heuristic risk check (keywords, cards, risky domains/paths).
+  6) confirm (node_confirm): user/auto confirm if required (auto_confirm bypass).
+  7) execute (node_execute/execute.py): perform action with fallbacks (reobserve+scroll wiggle → JS click → text-match), handle switch_tab, record context events.
+  8) progress (node_progress): score evidence, auto_done/ask_user per settings/stage, update repeat/no-progress/planner_calls/step counters.
+  9) ask_user (node_ask_user): interactive only if INTERACTIVE_PROMPTS=true; otherwise records stop_reason immediately.
+  10) error_retry (node_error_retry): one retry after planner/execute errors/timeouts/disallowed.
+  Flow: START → observe → (loop_mitigation?) → goal_check → planner → safety → confirm → execute → progress → ask_user → observe/END.
+
+Setup
+-----
+1) Install deps:
+```
+pip install -r requirements.txt
+# or minimal set
+pip install playwright openai jsonschema python-dotenv
+playwright install chromium
+```
+2) Create `.env` in repo root with at least:
+```
+OPENAI_API_KEY=your_key_here
+OPENAI_MODEL=chosen_model
+```
+Optional overrides below.
+
+Running
+-------
+Basic:
+`python src/main.py` or `python src/main.py --goal "Find the product"`
+
+Useful flags:
+- `--hide-overlay` to hide DOM badges
+- `--clean-between-goals` to wipe logs/state/screenshots per goal
+- `--ui-shell` to run the interactive shell wrapper (uses same graph)
+- `--plan-only` to disable execution (plan/debug only)
+- `--auto-confirm` to skip safety confirmation (use with care)
 
 Artifacts & Logs
 ----------------
@@ -46,72 +76,13 @@ Artifacts & Logs
 - data/user_data: persistent browser profile
 - logs/agent.log, logs/trace.jsonl (if available)
 
-Setup
------
-1) Install deps:
-```
-pip install -r requirements.txt  # if present
-# or minimal set
-pip install playwright openai jsonschema python-dotenv
-playwright install chromium
-```
-2) Create `.env` in repo root with at least:
-```
-OPENAI_API_KEY=your_key_here
-```
-Optional overrides below.
-
-Running
--------
-Basic (LangGraph is default, execution on):
-```
-python src/main.py --goal "Find the product"
-```
-(`--langgraph` is no longer needed; LangGraph is always used and legacy runs only as a fallback on failures.)
-Useful flags:
-- `--hide-overlay` to hide DOM badges
-- `--clean-between-goals` to wipe logs/state/screenshots per goal
-- `--ui-shell` to run the interactive shell wrapper (uses same graph)
-- `--plan-only` to disable execution (plan/debug only)
-- `--auto-confirm` to skip safety confirmation (use with care)
-
-Using UI Shell
---------------
-```
-python src/main.py --ui-shell
-```
-- Honors `INTERACTIVE_PROMPTS` for ask_user/confirm flow.
-- `--ui-step-limit` can cap steps for UI shell runs only.
-
-Configuration (Env / .env / CLI overrides)
+Configuration (Env / .env / CLI flags)
 ------------------------------------------
-Priority: CLI > .env > process env. Key options:
-- OPENAI_API_KEY, OPENAI_MODEL (default gpt-4o-mini), OPENAI_BASE_URL
-- START_URL (default about:blank), HEADLESS (default false)
-- MAPPING_LIMIT (default 30)
-- PLANNER_SCREENSHOT_MODE (auto|always|never; default auto)
-- MAX_STEPS (default 6), PLANNER_TIMEOUT_SEC (25), EXECUTE_TIMEOUT_SEC (20)
-- AUTO_CONFIRM (false), ENABLE_RAW_LOGS (true)
-- LOOP_REPEAT_THRESHOLD (2), STAGNATION_THRESHOLD (2), MAX_AUTO_SCROLLS (3), LOOP_RETRY_MAPPING_BOOST (20)
-- PROGRESS_KEYWORDS (comma-separated)
-- AUTO_DONE_MODE (ask|auto), AUTO_DONE_THRESHOLD (2), AUTO_DONE_REQUIRE_URL_CHANGE (true)
-- PAGED_SCAN_STEPS (2), PAGED_SCAN_VIEWPORTS (2)
-- OBSERVE_SCREENSHOT_MODE (on_demand|always; default on_demand)
-- HIDE_OVERLAY (false)
-- VIEWPORT_WIDTH/HEIGHT, SYNC_VIEWPORT_WITH_WINDOW (false)
-- TYPE_SUBMIT_FALLBACK (true)
-- CONSERVATIVE_OBSERVE (false)
-- MAX_REOBSERVE_ATTEMPTS (1), MAX_ATTEMPTS_PER_ELEMENT (3), SCROLL_STEP (600)
-- MAX_PLANNER_CALLS (20), MAX_NO_PROGRESS_STEPS (20)
-- INTERACTIVE_PROMPTS (false)
-- Path overrides: USER_DATA_DIR, SCREENSHOTS_DIR, STATE_DIR, LOGS_DIR
-- Security lists: SENSITIVE_PATHS, RISKY_DOMAINS
-- USE_LANGGRAPH (enable graph; default is on)
+Priority: CLI > .env > process env.
+Full lists at [docs/configuration.md](/docs/configuration.md).
 
-Parameter reference (quick)
----------------------------
 Env / .env (key ones, with values):
-- `OPENAI_API_KEY` (required), `OPENAI_MODEL` (default gpt-4o-mini), `OPENAI_BASE_URL`
+- `OPENAI_API_KEY` (required), `OPENAI_MODEL`, `OPENAI_BASE_URL`
 - `START_URL` (default about:blank), `HEADLESS` (true|false)
 - `MAPPING_LIMIT` (int)
 - `PLANNER_SCREENSHOT_MODE` (auto|always|never; default auto)
@@ -124,27 +95,9 @@ Env / .env (key ones, with values):
 - Paths: `USER_DATA_DIR`, `SCREENSHOTS_DIR`, `STATE_DIR`, `LOGS_DIR`
 - Security: `SENSITIVE_PATHS`, `RISKY_DOMAINS`
 
-CLI Flags (override env)
-------------------------
-- `--goal` / `--goals` (queue)
-- `--plan-only` (disable execution; default is execute enabled)
-- `--auto-confirm`
-- `--max-steps`, `--planner-timeout`, `--execute-timeout`
-- `--screenshot-mode` (planner: auto|always|never), `--observe-screenshot-mode` (observe: on_demand|always)
-- `--mapping-limit`
-- `--loop-repeat-threshold`, `--stagnation-threshold`, `--max-auto-scrolls`, `--loop-retry-mapping-boost`
-- `--hide-overlay`
-- `--paged-scan-steps`, `--paged-scan-viewports`
-- `--auto-done-mode`, `--auto-done-threshold`, `--auto-done-require-url-change`
-- `--sync-viewport` / `--no-sync-viewport`
-- `--clean-between-goals`
-- `--ui-shell`, `--ui-step-limit`
-- `--conservative-observe`
-- `--max-reobserve-attempts`, `--max-attempts-per-element`, `--scroll-step`
-
-CLI reference (summary):
-- `--goal`/`--goals` set target(s)
-- `--plan-only` disables execution (plan/debug)
+CLI flags (override env):
+- `--goal`/`--goals` (queue)
+- `--plan-only` disable execution
 - `--auto-confirm` bypasses safety confirmation
 - Time/budgets: `--max-steps`, `--planner-timeout`, `--execute-timeout`, `--max-planner-calls`, `--max-no-progress-steps`
 - Mapping/loop: `--mapping-limit`, `--loop-repeat-threshold`, `--stagnation-threshold`, `--max-auto-scrolls`, `--loop-retry-mapping-boost`, `--paged-scan-steps`, `--paged-scan-viewports`, `--conservative-observe`

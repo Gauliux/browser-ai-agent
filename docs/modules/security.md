@@ -3,23 +3,22 @@ Module: src/agent/core/security.py
 
 Responsibility
 --------------
-- Оценить предлагаемое действие на потенциальную разрушительность и решить, нужно ли подтверждение.
+- Evaluate a proposed action for potential risk and decide whether confirmation is needed.
 
 Key Components
 --------------
 - SecurityDecision: requires_confirmation (bool), reason (optional).
-- Heuristics: ключевые слова (pay/buy/checkout/order/.../delete/remove/unsubscribe/transfer), card-like number pattern,
-  чувствительные формы (name/id/aria-label), risky navigation (SENSITIVE_PATHS, RISKY_DOMAINS).
-- _get_element_text: извлекает текст/role/tag по element_id из observation.
-- _has_sensitive_form: сканирует mapping на “payment/account” формы.
+- Heuristics: keywords (pay/buy/checkout/order/.../delete/remove/unsubscribe/transfer), card-like number pattern, sensitive forms (name/id/aria-label), risky navigation (SENSITIVE_PATHS, RISKY_DOMAINS).
+- _get_element_text: extracts text/role/tag by element_id from observation.
+- _has_sensitive_form: scans mapping for "payment/account" forms.
 
 Behavior
 --------
 - analyze_action(action, observation):
-  - Навигационные действия (navigate/search/go_back/go_forward) проходят риск-оценку наравне с кликами/типингом.
-  - Keyword/card/form/risky URL → requires_confirmation=True с reason.
-  - Иначе respects action.requires_confirmation flag (если задан).
-- prompt_confirmation(action, reason, auto_confirm=False): печатает reason/action; auto_confirm bypass; иначе спрашивает пользователя.
+  - Navigational actions (navigate/search/go_back/go_forward) go through risk analysis same as click/type.
+  - Keyword/card/form/risky URL → requires_confirmation=True with reason.
+  - Otherwise respects action.requires_confirmation flag (if provided).
+- prompt_confirmation(action, reason, auto_confirm=False): prints reason/action; auto_confirm bypass; otherwise asks the user.
 
 Settings/Env
 ------------

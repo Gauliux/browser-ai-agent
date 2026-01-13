@@ -3,12 +3,12 @@ Module: src/agent/io/ux_narration.py
 
 Responsibility
 --------------
-- Поддерживать UX-нарратив (читаемые сообщения пользователю) без влияния на логику графа.
+- Maintain UX narration (readable messages to the user) without affecting graph logic.
 
 API
 ---
-- append_ux(state: GraphState, text_log, message, keep_last=30) -> List[str]: добавляет сообщение в ux_messages, обрезает до keep_last, пишет в text_log (если есть).
+- append_ux(state: GraphState, text_log, message, keep_last=30) -> List[str]: appends message to ux_messages, trims to keep_last, writes to text_log if present.
 
 Used By
 -------
-- node_planner/node_execute для фиксации намерений/результатов; UX слой пассивен (не влияет на решения).
+- node_planner/node_execute to log intentions/results; UX layer is passive (does not influence decisions).

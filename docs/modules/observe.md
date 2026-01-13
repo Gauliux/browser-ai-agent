@@ -3,25 +3,25 @@ Module: src/agent/core/observe.py
 
 Responsibility
 --------------
-- Захват Observation: аннотированная карта интерактивных элементов (Set-of-Mark), опциональный скрин, зона-балансировка, сохранение артефактов.
-- Используется в узлах observe/execute фолбэках/paged_scan.
+- Capture Observation: annotated map of interactive elements (Set-of-Mark), optional screenshot, zone balancing, artifact saving.
+- Used in observe/execute fallbacks/paged_scan nodes.
 
 Key Components
 --------------
-- JS_SET_OF_MARK: отмечает видимые интерактивные элементы, data-agent-id, overlay номера (если не скрыт), собирает tag/text/role/zone/bbox/is_fixed/is_nav/is_disabled/attrs.
-- Data classes: BoundingBox, ElementMark (с is_disabled), Observation; ObservationRecorder сохраняет JSON.
+- JS_SET_OF_MARK: marks visible interactive elements, data-agent-id, overlay numbers (if not hidden), collects tag/text/role/zone/bbox/is_fixed/is_nav/is_disabled/attrs.
+- Data classes: BoundingBox, ElementMark (with is_disabled), Observation; ObservationRecorder saves JSON.
 - Helpers: collect_marks, capture_observation, zone balancing, label sanitization.
 
 Behavior
 --------
-- collect_marks(page, max_elements, viewports): JS-инъекция, фильтр видимости, ids по y/x, overlay если не скрыт, сортировка по y/x.
+- collect_marks(page, max_elements, viewports): JS injection, visibility filter, ids by y/x, overlay if not hidden, sorting by y/x.
 - capture_observation(...):
-  - Опциональный sync viewport с window.innerWidth/Height.
-  - Эффективный mapping_limit = settings.mapping_limit (+ _mapping_boost при paged_scan/loop).
-  - Zone balancing: round-robin по зонам (top/mid/bottom) с приоритетом fixed/nav.
-  - Скрин по observe_screenshot_mode (on_demand|always); имена включают label.
-  - Сохраняет Observation JSON/скрин в paths.state_dir/paths.screenshots_dir.
-- _prioritize_mapping/_apply_zone_balancing: сортировка и балансировка, сохраняет is_disabled.
+  - Optional viewport sync with window.innerWidth/Height.
+  - Effective mapping_limit = settings.mapping_limit (+ _mapping_boost during paged_scan/loop).
+  - Zone balancing: round-robin across zones (top/mid/bottom) prioritizing fixed/nav.
+  - Screenshot per observe_screenshot_mode (on_demand|always); names include label.
+  - Saves Observation JSON/screenshot to paths.state_dir/paths.screenshots_dir.
+- _prioritize_mapping/_apply_zone_balancing: sorting and balancing; preserves is_disabled.
 
 Settings Used
 -------------
@@ -29,5 +29,5 @@ Settings Used
 
 Integration Points
 ------------------
-- node_observe (первичный захват, goal-aware retries для sparse listing).
-- execute_with_fallbacks (reobserve при фейлах), paged_scan, planner screenshot recapture.
+- node_observe (primary capture, goal-aware retries for sparse listing).
+- execute_with_fallbacks (reobserve on failures), paged_scan, planner screenshot recapture.

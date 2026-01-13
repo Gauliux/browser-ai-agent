@@ -3,12 +3,12 @@ Module: src/agent/infra/capture.py
 
 Responsibility
 --------------
-- Обёртки над observe для графа: повторный захват с ретраями и paged_scan.
+- Wrappers around observe for the graph: retrying capture and paged_scan.
 
 API
 ---
-- capture_with_retry(runtime, settings, *, capture_screenshot: bool, label: str): ensure_page → capture_observation; retry на TargetClosed/временные ошибки.
-- paged_scan(runtime, settings, *, label_prefix=None): несколько observe проходов с автоскроллом (до paged_scan_steps/viewports), повышает mapping_limit через _mapping_boost.
+- capture_with_retry(runtime, settings, *, capture_screenshot: bool, label: str): ensure_page → capture_observation; retries on TargetClosed/transient errors.
+- paged_scan(runtime, settings, *, label_prefix=None): multiple observe passes with autoscroll (up to paged_scan_steps/viewports), increases mapping_limit via _mapping_boost.
 
 Used By
 -------

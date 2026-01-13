@@ -3,12 +3,12 @@ Module: src/agent/infra/termination_normalizer.py
 
 Responsibility
 --------------
-- Нормализует итоговое состояние LangGraph в единые terminal_reason/type и summary запись.
+- Normalize LangGraph final state into terminal_reason/type and summary record.
 
 Behavior
 --------
-- normalize_terminal(state, session_id, text_log?, trace?): маппит stop_reason → terminal_reason/type (budget/goal/loop), записывает summary в trace/text log, сохраняет stop_details.
+- normalize_terminal(state, session_id, text_log?, trace?): maps stop_reason → terminal_reason/type (budget/goal/loop), writes summary to trace/text log, stores stop_details.
 
 Used By
 -------
-- langgraph_loop.run после выполнения графа.
+- langgraph_loop.run after graph execution.

@@ -3,39 +3,39 @@ Architecture Overview
 
 Goal
 ----
-Headful, persistent Playwright агент, оркестрируемый LangGraph: наблюдает DOM (Set-of-Mark), планирует через OpenAI function-calling, исполняет действия с фолбэками и безопасностью, фиксирует вкладки/контекстные события/интент/UX-нарратив.
+Headful, persistent Playwright agent orchestrated by LangGraph: observes DOM (Set-of-Mark), plans via OpenAI function-calling, executes with fallbacks and safety, tracks tabs/context events/intent/UX narration.
 
 Key Decisions
 -------------
-- Стек: Python 3, Playwright headful persistent, OpenAI SDK (f-calling), LangGraph.
-- Ориентация на наблюдение: Set-of-Mark вместо CV; лимит/баланс элементов; скрин по запросу.
-- Оркестрация: явный граф узлов observe → loop_mitigation → goal_check → planner → safety → confirm → execute → progress → ask_user/error_retry; структура не меняется.
-- Безопасность: эвристики для risk actions + confirm (auto_confirm опционален).
-- Стабильные FSM/терминалы: stages orient/context/locate/verify/done, terminal_reason fixed (goal_satisfied/goal_failed/loop_stuck/budget_exhausted).
-- Прозрачность: intent_text/history, UX-narration, trace.jsonl, records.
+- Stack: Python 3, Playwright headful persistent, OpenAI SDK (function-calling), LangGraph.
+- Observation-first: Set-of-Mark instead of CV; element limit/balancing; screenshots on demand.
+- Orchestration: fixed graph of nodes observe → loop_mitigation → goal_check → planner → safety → confirm → execute → progress → ask_user/error_retry.
+- Safety: heuristics for risky actions + confirm (auto_confirm optional).
+- Stable FSM/terminals: stages orient/context/locate/verify/done; terminal_reason fixed (goal_satisfied/goal_failed/loop_stuck/budget_exhausted).
+- Transparency: intent_text/history, UX narration, trace.jsonl, records.
 
 Main Components
 ---------------
-- Runtime (infra/runtime.py): жизненный цикл браузера, активная вкладка, TargetClosed устойчивость, метаданные вкладок.
-- Capture (infra/capture.py): observe с ретраями и paged_scan.
-- Graph (core/graph_orchestrator.py + node_*.py): узлы графа разнесены по файлам; тонкий фасад langgraph_loop.py собирает и запускает.
-- State/helpers (core/graph_state.py): GraphState TypedDict, hashes, classifiers (goal/page/task), scoring, records, terminal маппинг.
-- Planner (core/planner.py + node_planner): LLM с строгой схемой и богатыми контекстами.
-- Execute (core/execute.py + node_execute): исполнение действий с фолбэками, учёт вкладок, контекстных событий.
-- Observe (core/observe.py + node_observe): Set-of-Mark JS, overlay, goal-aware retries для sparse listings.
-- Safety/confirm (core/security.py + node_safety/confirm): риск-оценка + подтверждения.
-- Progress (node_progress): прогресс-скоринг, авто done/ask_user, no-progress счётчики.
-- UX (io/ux_narration.py, io/ui_shell.py): поток сообщений для пользователя, опциональный интерактивный шелл.
+- Runtime (infra/runtime.py): browser lifecycle, active tab tracking, TargetClosed resilience, tab metadata.
+- Capture (infra/capture.py): observe with retries and paged_scan.
+- Graph (core/graph_orchestrator.py + node_*.py): nodes split by file; thin facade langgraph_loop.py builds/executes.
+- State/helpers (core/graph_state.py): GraphState TypedDict, hashes, classifiers (goal/page/task), scoring, records, terminal mapping.
+- Planner (core/planner.py + node_planner): LLM with strict schema and rich context.
+- Execute (core/execute.py + node_execute): action execution with fallbacks, tab/context event handling.
+- Observe (core/observe.py + node_observe): Set-of-Mark JS, overlay, goal-aware retries for sparse listings.
+- Safety/confirm (core/security.py + node_safety/confirm): risk analysis + confirmations.
+- Progress (node_progress): progress scoring, auto done/ask_user, no-progress counters.
+- UX (io/ux_narration.py, io/ui_shell.py): UX messages; optional interactive shell.
 
 Flows
 -----
-- LangGraph: observe → (loop_mitigation если loop_trigger) → goal_check → planner → safety → confirm → execute → progress → ask_user → observe/END; error_retry после planner/execute ошибок/таймаутов/disallowed.
-- Терминалы нормализуются termination_normalizer к terminal_reason/type.
-- Начальное состояние выставляет goal_kind/stage, счётчики, tabs/tab_events, intent/ux/context_events.
+- LangGraph: observe → (loop_mitigation if loop_trigger) → goal_check → planner → safety → confirm → execute → progress → ask_user → observe/END; error_retry after planner/execute errors/timeouts/disallowed.
+- Terminals normalized by termination_normalizer to terminal_reason/type.
+- Initial state sets goal_kind/stage, counters, tabs/tab_events, intent/ux/context_events.
 
 State Tracing/Artifacts
 -----------------------
-- data/state: planner/execute JSON, labels session/step; observe mapping/screenshot пути.
-- logs/trace.jsonl: записи узлов/records/summary.
-- logs/agent.log: текстовые события.
-- UX messages и intent_history сохраняются в GraphState (для отчётов, не для логики).
+- data/state: planner/execute JSON, labels session/step; observe mapping/screenshot paths.
+- logs/trace.jsonl: node records/summary.
+- logs/agent.log: text events.
+- UX messages and intent_history kept in GraphState (for reports; not used in logic).

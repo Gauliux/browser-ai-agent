@@ -3,7 +3,7 @@ Module: src/agent/config/config.py
 
 Responsibility
 --------------
-- Load environment variables (.env if available), clamp numeric values, set defaults, build Settings dataclass.
+- Load environment variables (.env if available), clamp numeric values, set defaults, build the Settings dataclass.
 - Resolve paths via Paths.from_env and ensure directories exist.
 
 Key Settings (see configuration.md for full list)
@@ -17,10 +17,10 @@ Key Settings (see configuration.md for full list)
 
 Notable Behavior
 ----------------
-- .env берётся из корня репозитория и загружается с override=True (приоритет: CLI → .env → env).
-- clamp_int гарантирует минимумы; enum поля нормализуются.
+- .env is loaded from the repo root with override=True (priority: CLI → .env → env).
+- clamp_int enforces minimums; enum fields are normalized.
 - sync_viewport_with_window default false; hide_overlay default false.
 
 Outputs
 -------
-- Settings dataclass с Paths; директории ensure().
+- Settings dataclass with Paths; directories are ensured to exist.

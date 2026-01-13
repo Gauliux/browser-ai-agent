@@ -3,12 +3,12 @@ Module: src/agent/core/graph_orchestrator.py
 
 Responsibility
 --------------
-- Компилирует LangGraph StateGraph из подготовленных узлов.
+- Compile a LangGraph StateGraph from prepared nodes.
 
 Behavior
 --------
 - compile_graph(nodes: Dict[str, callable]) -> compiled graph.
-- Фиксированная структура/переходы: observe → (loop_mitigation если loop_trigger иначе goal_check) → planner → safety → confirm → execute → progress → ask_user/error_retry/observe → END. error_retry/ask_user ветки как в коде; GraphRecursionError handled на фасаде.
+- Fixed structure/transitions: observe → (loop_mitigation if loop_trigger else goal_check) → planner → safety → confirm → execute → progress → ask_user/error_retry/observe → END. error_retry/ask_user branches follow code; GraphRecursionError handled at the facade.
 
 Used By
 -------

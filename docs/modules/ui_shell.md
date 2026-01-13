@@ -3,22 +3,22 @@ Module: src/agent/io/ui_shell.py
 
 Responsibility
 --------------
-- Опциональная интерактивная оболочка вокруг runner (предпочтительно LangGraph), обрабатывает ввод целей, прерывания и простые подсказки.
+- Optional interactive shell around a runner (preferably LangGraph); handles goal input, interruptions, and simple prompts.
 
 Behavior
 --------
 - run_ui_shell(runner, settings, clean_between_goals?, text_log?, trace?):
-  - Сохраняет прерванную цель и предлагает повторить или ввести новую.
-  - Показывает минимальную “ожидание” анимацию во время выполнения.
-  - При KeyboardInterrupt/исключениях держит цикл живым и сохраняет goal для retry.
-  - По завершении: если stop_reason мягкий (ask_user) и интерактив включён, спросит подтверждение; иначе пишет лог.
-- Использует копию settings (replace) для UI-специфичных ограничений (ui_step_limit).
+  - Saves an interrupted goal and offers to retry or enter a new one.
+  - Shows a minimal “waiting” animation during execution.
+  - On KeyboardInterrupt/errors keeps the loop alive and preserves the goal for retry.
+  - On finish: if stop_reason is soft (ask_user) and interactive is on, asks for confirmation; otherwise logs.
+- Uses a copy of settings (replace) for UI-specific limits (ui_step_limit).
 
 Inputs/Outputs
 --------------
-- runner: async goal -> dict (ожидается stop_reason/stop_details).
-- clean_between_goals: опциональный callable; text_log/trace применяются если заданы.
+- runner: async goal -> dict (expects stop_reason/stop_details).
+- clean_between_goals: optional callable; text_log/trace used if provided.
 
 Notes
 -----
-- INTERACTIVE_PROMPTS управляет тем, блокируют ли промпты; сама UI shell флаг не меняет.
+- INTERACTIVE_PROMPTS controls whether prompts block; the UI shell flag does not change it.

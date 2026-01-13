@@ -9,28 +9,27 @@ Responsibility
 Data Structures
 ---------------
 - ExecutionResult: success, action, error, screenshot_path, recorded_at; to_dict().
-- save_execution_result: save ExecutionResult JSON (labelled) to paths.state_dir.
+- save_execution_result: save ExecutionResult JSON (labeled) to paths.state_dir.
 
 Action Execution
 ----------------
 - Supported actions: done/ask_user (meta), go_back/go_forward, navigate (value required),
-  search (if element_id provided: focus/fill + Enter; else type + Enter with Ctrl+L fallback), scroll, click, type (fill + optional Enter), screenshot.
-- switch_tab как first-class: переключение активной страницы делается на уровне runtime/execute-node;
-  само исполнение не должно трактовать tab-switch как failure.
-- Скрины: filenames включают label (обычно session-step).
+  search (if element_id provided: focus/scroll element, fill query, press Enter; else type + Enter with Ctrl+L fallback), scroll, click, type (fill + optional Enter), screenshot.
+- switch_tab is first-class: tab switch is handled by runtime/execute-node; execution should not treat tab-switch as a failure.
+- Screenshots: filenames include label (typically session-step).
 
 Fallback Chain (execute_with_fallbacks)
 ---------------------------------------
-- Initial execute_action; если fail (не meta), ретраи до max_reobserve_attempts:
+- Initial execute_action; if it fails (non-meta), retries up to max_reobserve_attempts:
   - Optional wiggle scroll (alternating direction, scroll_step).
-  - Reobserve через capture_observation (labelled), затем повтор execute_action.
-- Если всё ещё fail и action=click: JS click по element id → text-match click по тексту.
-- Per-element failures/avoid-list ведёт execute node (graph), не этот модуль.
+  - Reobserve via capture_observation (labeled), then retry execute_action.
+- If still failing and action=click: JS click by element id → text-match click by text.
+- Per-element failures/avoid-list is managed by the execute node (graph), not this module.
 
 Settings Used
 -------------
-- paths.screenshots_dir, paths.state_dir; type_submit_fallback; scroll_step; max_reobserve_attempts (передаётся извне).
+- paths.screenshots_dir, paths.state_dir; type_submit_fallback; scroll_step; max_reobserve_attempts (passed in).
 
 Integration Points
 ------------------
-- node_execute отвечает за табы/context_events/records/UX и оборачивает execute_with_fallbacks + save_execution_result.
+- node_execute handles tabs/context_events/records/UX and wraps execute_with_fallbacks + save_execution_result.
