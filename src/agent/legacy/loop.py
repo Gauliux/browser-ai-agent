@@ -395,7 +395,7 @@ class AgentLoop:
         stop_details: Optional[str] = None
 
         if not self.execute_enabled:
-            msg = "[loop] Execution is disabled (run with --execute or set EXECUTE=1); skipping actions for this goal."
+            msg = "[loop] Execution is disabled (plan-only mode); skipping actions for this goal."
             print(msg)
             self.text_log.write(f"[session {session_id}] execution disabled for goal='{goal}'")
             stop_reason = "execution_disabled"

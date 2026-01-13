@@ -5,6 +5,7 @@ from dataclasses import replace
 from typing import Any, Awaitable, Callable, Optional
 
 from agent.config.config import Settings
+from agent.core.graph_state import INTERACTIVE_PROMPTS
 from agent.infra.tracing import TextLogger, TraceLogger
 
 
@@ -25,6 +26,7 @@ async def run_ui_shell(
     """
     saved_goal: Optional[str] = None
     ui_settings = replace(settings)  # defensive copy if we tweak later
+    interactive_prompts = INTERACTIVE_PROMPTS
 
     def log(msg: str) -> None:
         print(msg)
@@ -100,14 +102,18 @@ async def run_ui_shell(
             saved_goal = goal
         else:
             if stop_reason in {"progress_ask_user", "meta_ask_user"}:
-                print()
-                ans = input("[ui] Агент считает задачу выполненной. Подтвердить завершение? (y/N): ").strip().lower()
-                if ans in {"y", "yes", "д", "да"}:
-                    log("[ui] Завершено по подтверждению пользователя.")
+                if not interactive_prompts:
+                    log("[ui] Агент завершил без интерактивного подтверждения (INTERACTIVE_PROMPTS=false).")
                     saved_goal = None
                 else:
-                    log("[ui] Отклонено. Задача сохранена для повторной попытки.")
-                    saved_goal = goal
+                    print()
+                    ans = input("[ui] Агент считает задачу выполненной. Подтвердить завершение? (y/N): ").strip().lower()
+                    if ans in {"y", "yes", "д", "да"}:
+                        log("[ui] Завершено по подтверждению пользователя.")
+                        saved_goal = None
+                    else:
+                        log("[ui] Отклонено. Задача сохранена для повторной попытки.")
+                        saved_goal = goal
             else:
                 log(f"[ui] Исполнение завершено. причина={stop_reason} подробности={stop_details}")
                 saved_goal = None

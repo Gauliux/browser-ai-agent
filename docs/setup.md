@@ -21,7 +21,7 @@ Installation
 First Run (LangGraph)
 ---------------------
 ```bash
-python src/main.py --goal "My goal" --langgraph --execute
+python src/main.py --goal "My goal"
 ```
 - Add `--clean-between-goals` to wipe logs/state/screenshots between goals.
 - Add `--hide-overlay` if overlays bother you.
@@ -29,7 +29,7 @@ python src/main.py --goal "My goal" --langgraph --execute
 UI Shell (optional)
 -------------------
 ```bash
-python src/main.py --ui-shell --langgraph --execute
+python src/main.py --ui-shell
 ```
 - Use `--ui-step-limit` to cap steps in UI shell mode only.
 

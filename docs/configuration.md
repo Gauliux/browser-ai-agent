@@ -39,13 +39,12 @@ Environment Variables (defaults) — подробно
 - INTERACTIVE_PROMPTS=false — если true, progress/ask_user блокируют и спрашивают; иначе без ожидания.
 - Path overrides: USER_DATA_DIR, SCREENSHOTS_DIR, STATE_DIR, LOGS_DIR - расположение профиля/артефактов/логов.
 - Security lists: SENSITIVE_PATHS, RISKY_DOMAINS — строки через запятую; навигация на них требует confirm.
-- EXECUTE (не основной, но читается) — включает исполнение в legacy контексте; в CLI есть --execute.
-- USE_LANGGRAPH (опционально) — включает LangGraph по env.
+- USE_LANGGRAPH (опционально) - включает LangGraph по env.
 
-CLI Flags (override env) - подробно
------------------------------------
+ CLI Flags (override env) - подробно
+ -----------------------------------
 - --goal / --goals — задать одну или несколько целей (очередь).
-- --execute — включить выполнение действий (иначе только планер; для LangGraph обычно включаем).
+- --plan-only — отключить исполнение (по умолчанию исполняет действия).
 - --auto-confirm — автоматически подтверждать рискованные действия.
 - --max-steps, --planner-timeout, --execute-timeout — бюджеты/таймауты.
 - --screenshot-mode — для планера (auto/always/never).

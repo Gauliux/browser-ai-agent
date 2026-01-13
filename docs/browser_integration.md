@@ -6,7 +6,7 @@ Launch & Context
 - Playwright Chromium, headful, launch_persistent_context with user_data_dir (persistent profile).
 - Args: --start-maximized; viewport optional (env VIEWPORT_*); sync_viewport_with_window optional.
 - Active page tracking: set_active_page; on page close selects alive page; on new page sets active; TargetClosed heuristic used by observe/execute retries.
-- switch_tab: planner action sets hint; observe checks last action and applies set_active_page_by_hint (url/title/index hint).
+- switch_tab: planner action sets hint; execute node переключает вкладку через runtime.set_active_page_by_hint (url/title/index hint) и сразу реобсервацию не делает отдельно (всё внутри execute).
 
 DOM Annotation (Set-of-Mark)
 ----------------------------
@@ -23,7 +23,7 @@ Screenshots
 
 Actions → Playwright
 --------------------
-- navigate (page.goto), search (type query, Enter; Ctrl+L fallback), go_back/go_forward (history), switch_tab (handled in observe via hint), click/type/scroll/screenshot.
+- navigate (page.goto), search (type query, Enter; Ctrl+L fallback), go_back/go_forward (history), switch_tab (handled in execute via hint), click/type/scroll/screenshot.
 - scroll: wheel if no element, scroll_into_view otherwise; scroll_step configurable.
 - type: fill value, optional Enter (TYPE_SUBMIT_FALLBACK).
 

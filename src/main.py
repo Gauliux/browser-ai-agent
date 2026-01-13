@@ -16,7 +16,6 @@ async def amain() -> None:
     parser = argparse.ArgumentParser(description="Headful browser agent with planning and execution.")
     parser.add_argument("--goal", help="Goal for the agent (overrides PLANNER_GOAL).")
     parser.add_argument("--goals", nargs="+", help="Multiple goals to run sequentially.")
-    parser.add_argument("--execute", action="store_true", help="Enable execution (overrides EXECUTE env).")
     parser.add_argument("--auto-confirm", action="store_true", help="Auto-confirm destructive actions.")
     parser.add_argument("--max-steps", type=int, help="Max steps in the loop.")
     parser.add_argument("--planner-timeout", type=float, help="Planner timeout in seconds.")
@@ -27,7 +26,11 @@ async def amain() -> None:
     parser.add_argument("--stagnation-threshold", type=int, help="Stagnation threshold for loop mitigation.")
     parser.add_argument("--max-auto-scrolls", type=int, help="Max auto-scroll attempts during loop mitigation.")
     parser.add_argument("--loop-retry-mapping-boost", type=int, help="Extra mapping size on loop replan.")
-    parser.add_argument("--langgraph", action="store_true", help="Use LangGraph orchestrator instead of custom loop.")
+    parser.add_argument(
+        "--langgraph",
+        action="store_true",
+        help="(deprecated; LangGraph is always used by default, flag is ignored unless fallback occurs)",
+    )
     parser.add_argument("--hide-overlay", action="store_true", help="Hide overlay badges during observation.")
     parser.add_argument("--paged-scan-steps", type=int, help="Number of paged scan steps during loop mitigation.")
     parser.add_argument("--paged-scan-viewports", type=int, help="How many viewports to capture per paged scan step.")
@@ -74,6 +77,11 @@ async def amain() -> None:
         help="Perform an extra observe pass before scrolling/paged scan when loop is detected.",
     )
     parser.add_argument(
+        "--plan-only",
+        action="store_true",
+        help="Disable execution; plan only (for debugging). Execution is enabled by default.",
+    )
+    parser.add_argument(
         "--max-reobserve-attempts",
         type=int,
         help="Max reobserve attempts during execute fallbacks.",
@@ -94,8 +102,6 @@ async def amain() -> None:
 
     def apply_cli_overrides() -> None:
         # Centralized override block for CLI/interactive extensions.
-        if args.execute:
-            os.environ["EXECUTE"] = "1"
         if args.auto_confirm:
             settings.auto_confirm = True
         if args.max_steps:
@@ -155,7 +161,8 @@ async def amain() -> None:
         goals_queue.extend(args.goals)
     elif args.goal:
         goals_queue.append(args.goal)
-    use_langgraph = args.langgraph or os.getenv("USE_LANGGRAPH", "").lower() in {"1", "true", "yes", "on"}
+    # LangGraph is the default; legacy is only used as a fallback on failures.
+    use_langgraph = True
     runtime = BrowserRuntime(ui_settings if args.ui_shell else settings)
 
     await runtime.launch()
@@ -181,7 +188,7 @@ async def amain() -> None:
     if not settings.openai_api_key:
         print("[agent] OPENAI_API_KEY not set; skipping loop and keeping browser open.")
     else:
-        execute_flag = os.getenv("EXECUTE", "").lower() in {"1", "true", "yes", "on"}
+        execute_enabled = not args.plan_only
         planner = Planner(
             api_key=settings.openai_api_key,
             model=settings.openai_model,
@@ -206,7 +213,7 @@ async def amain() -> None:
                         settings=active_settings,
                         planner=planner,
                         runtime=runtime,
-                        execute_enabled=execute_flag,
+                        execute_enabled=execute_enabled,
                         text_log=text_log,
                         trace=trace,
                     )
@@ -219,7 +226,7 @@ async def amain() -> None:
                     settings=active_settings,
                     planner=planner,
                     agent_state=agent_state,
-                    execute_enabled=execute_flag,
+                    execute_enabled=execute_enabled,
                     runtime=runtime,
                 )
 
@@ -268,7 +275,7 @@ async def amain() -> None:
                         settings=active_settings,
                         planner=planner,
                         runtime=runtime,
-                        execute_enabled=execute_flag,
+                        execute_enabled=execute_enabled,
                         text_log=text_log,
                         trace=trace,
                     )
@@ -283,7 +290,7 @@ async def amain() -> None:
                         settings=active_settings,
                         planner=planner,
                         agent_state=agent_state,
-                        execute_enabled=execute_flag,
+                        execute_enabled=execute_enabled,
                         runtime=runtime,
                     )
                     await loop.run(goal=goal)

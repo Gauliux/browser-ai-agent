@@ -23,12 +23,12 @@ Key Behaviors
 
 Configs to Know
 ---------------
-- Flags/env: max_steps, mapping_limit, planner/execute timeouts, loop thresholds, max_planner_calls, max_no_progress_steps, max_reobserve_attempts, max_attempts_per_element, scroll_step, paged_scan_* , observe/planner screenshot modes, hide_overlay, auto_done_*, INTERACTIVE_PROMPTS, AUTO_CONFIRM, EXECUTE.
+- Flags/env: max_steps, mapping_limit, planner/execute timeouts, loop thresholds, max_planner_calls, max_no_progress_steps, max_reobserve_attempts, max_attempts_per_element, scroll_step, paged_scan_* , observe/planner screenshot modes, hide_overlay, auto_done_*, INTERACTIVE_PROMPTS, AUTO_CONFIRM.
 - Paths: data/user_data (profile), data/state (JSON artifacts), data/screenshots, logs/agent.log, logs/trace.jsonl.
 
 Run Example
 -----------
-`python src/main.py --goal "..." --langgraph --execute --hide-overlay --mapping-limit 40 --max-steps 12`
+`python src/main.py --goal "..." --hide-overlay --mapping-limit 40 --max-steps 12`
 
 Where to Look for Details
 -------------------------
