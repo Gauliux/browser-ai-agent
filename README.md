@@ -45,8 +45,6 @@ Setup
 -----
 1) Install deps:
 ```
-pip install -r requirements.txt
-# or minimal set
 pip install playwright openai jsonschema python-dotenv
 playwright install chromium
 ```
@@ -83,15 +81,15 @@ Full lists at [docs/configuration.md](/docs/configuration.md).
 
 Env / .env (key ones, with values):
 - `OPENAI_API_KEY` (required), `OPENAI_MODEL`, `OPENAI_BASE_URL`
-- `START_URL` (default about:blank), `HEADLESS` (true|false)
+- `START_URL` (default about:blank), `HEADLESS` (`true`|`false`)
 - `MAPPING_LIMIT` (int)
-- `PLANNER_SCREENSHOT_MODE` (auto|always|never; default auto)
-- `OBSERVE_SCREENSHOT_MODE` (on_demand|always; default on_demand)
+- `PLANNER_SCREENSHOT_MODE` (`auto`|`always`|`never`; default auto)
+- `OBSERVE_SCREENSHOT_MODE` (`on_demand`|`always`; default on_demand)
 - Budgets/timeouts: `MAX_STEPS`, `PLANNER_TIMEOUT_SEC`, `EXECUTE_TIMEOUT_SEC`, `MAX_PLANNER_CALLS`, `MAX_NO_PROGRESS_STEPS`
-- Loop: `LOOP_REPEAT_THRESHOLD`, `STAGNATION_THRESHOLD`, `MAX_AUTO_SCROLLS`, `LOOP_RETRY_MAPPING_BOOST`, `PAGED_SCAN_STEPS`, `PAGED_SCAN_VIEWPORTS`, `CONSERVATIVE_OBSERVE` (true|false)
-- Safety/UX: `AUTO_CONFIRM` (true|false), `INTERACTIVE_PROMPTS` (true|false), `PROGRESS_KEYWORDS`, `AUTO_DONE_MODE` (ask|auto), `AUTO_DONE_THRESHOLD` (int), `AUTO_DONE_REQUIRE_URL_CHANGE` (true|false)
-- Execution resilience: `MAX_REOBSERVE_ATTEMPTS`, `MAX_ATTEMPTS_PER_ELEMENT`, `SCROLL_STEP`, `TYPE_SUBMIT_FALLBACK` (true|false)
-- Overlay/view: `HIDE_OVERLAY` (true|false), `VIEWPORT_WIDTH/HEIGHT` (ints), `SYNC_VIEWPORT_WITH_WINDOW` (true|false)
+- Loop: `LOOP_REPEAT_THRESHOLD`, `STAGNATION_THRESHOLD`, `MAX_AUTO_SCROLLS`, `LOOP_RETRY_MAPPING_BOOST`, `PAGED_SCAN_STEPS`, `PAGED_SCAN_VIEWPORTS`, `CONSERVATIVE_OBSERVE` (`true`|`false`)
+- Safety/UX: `AUTO_CONFIRM` (`true`|`false`), `INTERACTIVE_PROMPTS` (`true`|`false`), `PROGRESS_KEYWORDS`, `AUTO_DONE_MODE` (`ask`|`auto`), `AUTO_DONE_THRESHOLD` (int), `AUTO_DONE_REQUIRE_URL_CHANGE` (`true`|`false`)
+- Execution resilience: `MAX_REOBSERVE_ATTEMPTS`, `MAX_ATTEMPTS_PER_ELEMENT`, `SCROLL_STEP`, `TYPE_SUBMIT_FALLBACK` (`true`|`false`)
+- Overlay/view: `HIDE_OVERLAY` (`true`|`false`), `VIEWPORT_WIDTH/HEIGHT` (ints), `SYNC_VIEWPORT_WITH_WINDOW` (`true`|`false`)
 - Paths: `USER_DATA_DIR`, `SCREENSHOTS_DIR`, `STATE_DIR`, `LOGS_DIR`
 - Security: `SENSITIVE_PATHS`, `RISKY_DOMAINS`
 
@@ -101,7 +99,7 @@ CLI flags (override env):
 - `--auto-confirm` bypasses safety confirmation
 - Time/budgets: `--max-steps`, `--planner-timeout`, `--execute-timeout`, `--max-planner-calls`, `--max-no-progress-steps`
 - Mapping/loop: `--mapping-limit`, `--loop-repeat-threshold`, `--stagnation-threshold`, `--max-auto-scrolls`, `--loop-retry-mapping-boost`, `--paged-scan-steps`, `--paged-scan-viewports`, `--conservative-observe`
-- Screenshots/overlay: `--screenshot-mode` (planner: auto|always|never), `--observe-screenshot-mode` (observe: on_demand|always), `--hide-overlay`
+- Screenshots/overlay: `--screenshot-mode` (planner: `auto`|`always`|`never`), `--observe-screenshot-mode` (observe: `on_demand`|`always`), `--hide-overlay`
 - Auto-done: `--auto-done-mode`, `--auto-done-threshold`, `--auto-done-require-url-change`
 - Viewport/scroll: `--sync-viewport`/`--no-sync-viewport`, `--scroll-step`, `--max-reobserve-attempts`, `--max-attempts-per-element`
 - Workflow: `--clean-between-goals`, `--ui-shell`, `--ui-step-limit`

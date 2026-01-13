@@ -2,12 +2,12 @@
 ===================
 Headful Playwright + OpenAI (function-calling) агент, оркестрируемый LangGraph. Использует DOM Set-of-Mark для наблюдения, планирует по строгой схеме tool call, исполняется с простыми фолбэками и пишет артефакты (JSON, скриншоты, трейс).
 
-Demo
+Демо
 ----
 <img src="demo.gif" alt="UwU gif demo OwO">
 
-Технологии
-----------
+Стек
+----
 - Python 3.10+ (async)
 - Playwright Chromium (headful, persistent profile)
 - OpenAI SDK (function-calling)
@@ -45,8 +45,6 @@ Demo
 ---------
 1) Установить зависимости:
 ```
-pip install -r requirements.txt
-# или минимальный набор
 pip install playwright openai jsonschema python-dotenv
 playwright install chromium
 ```
@@ -82,10 +80,10 @@ OPENAI_MODEL=модель
 
 Env / .env (ключевые):
 - `OPENAI_API_KEY` (обязательно), `OPENAI_MODEL`, `OPENAI_BASE_URL`
-- `START_URL` (about:blank), `HEADLESS` (true|false)
+- `START_URL` (about:blank), `HEADLESS` (`true`|`false`)
 - `MAPPING_LIMIT` (int)
-- `PLANNER_SCREENSHOT_MODE` (auto|always|never; по умолчанию auto)
-- `OBSERVE_SCREENSHOT_MODE` (on_demand|always; по умолчанию on_demand)
+- `PLANNER_SCREENSHOT_MODE` (`auto`|`always`|`never`; по умолчанию auto)
+- `OBSERVE_SCREENSHOT_MODE` (`on_demand`|`always`; по умолчанию on_demand)
 - Бюджеты/таймауты: `MAX_STEPS`, `PLANNER_TIMEOUT_SEC`, `EXECUTE_TIMEOUT_SEC`, `MAX_PLANNER_CALLS`, `MAX_NO_PROGRESS_STEPS`
 - Loop: `LOOP_REPEAT_THRESHOLD`, `STAGNATION_THRESHOLD`, `MAX_AUTO_SCROLLS`, `LOOP_RETRY_MAPPING_BOOST`, `PAGED_SCAN_STEPS`, `PAGED_SCAN_VIEWPORTS`, `CONSERVATIVE_OBSERVE`
 - Safety/UX: `AUTO_CONFIRM`, `INTERACTIVE_PROMPTS`, `PROGRESS_KEYWORDS`, `AUTO_DONE_MODE`, `AUTO_DONE_THRESHOLD`, `AUTO_DONE_REQUIRE_URL_CHANGE`
@@ -100,7 +98,7 @@ CLI-флаги (override env):
 - `--auto-confirm`
 - Время/бюджеты: `--max-steps`, `--planner-timeout`, `--execute-timeout`, `--max-planner-calls`, `--max-no-progress-steps`
 - Mapping/loop: `--mapping-limit`, `--loop-repeat-threshold`, `--stagnation-threshold`, `--max-auto-scrolls`, `--loop-retry-mapping-boost`, `--paged-scan-steps`, `--paged-scan-viewports`, `--conservative-observe`
-- Скриншоты/overlay: `--screenshot-mode` (planner: auto|always|never), `--observe-screenshot-mode` (observe: on_demand|always), `--hide-overlay`
+- Скриншоты/overlay: `--screenshot-mode` (planner: `auto`|`always`|`never`), `--observe-screenshot-mode` (observe: `on_demand`|`always`), `--hide-overlay`
 - Auto-done: `--auto-done-mode`, `--auto-done-threshold`, `--auto-done-require-url-change`
 - Viewport/scroll: `--sync-viewport` / `--no-sync-viewport`, `--scroll-step`, `--max-reobserve-attempts`, `--max-attempts-per-element`
 - Workflow: `--clean-between-goals`, `--ui-shell`, `--ui-step-limit`
