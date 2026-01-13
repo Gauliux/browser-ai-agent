@@ -50,3 +50,12 @@ Progress & Stopping
 - progress_score: url/title/keywords/goal_hits/last_action target; page_type heuristic (listing/detail).
 - auto_done works only on late stages; ask_user/interactive optional.
 - Every run ends with terminal_reason/type; recursion_limit guards infinite loops.
+
+Related module docs
+-------------------
+- [docs/modules/langgraph_loop.md](/docs/modules/langgraph_loop.md)
+- [docs/modules/observe.md](/docs/modules/observe.md)
+- [docs/modules/planner.md](/docs/modules/planner.md)
+- [docs/modules/execute.md](/docs/modules/execute.md)
+- [docs/modules/graph_state.md](/docs/modules/graph_state.md)
+- [docs/modules/termination_normalizer.md](/docs/modules/termination_normalizer.md)

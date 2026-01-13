@@ -38,3 +38,10 @@ State & Artifacts
 - observation/planner/execute JSONs in data/state with session/step label.
 - screenshots in data/screenshots (observe-* / exec-*/js-click/text-click with label).
 - Trace/logs capture paths for debugging (planner_raw_path, exec_result_path).
+
+Related module docs
+-------------------
+- [docs/modules/runtime.md](/docs/modules/runtime.md)
+- [docs/modules/observe.md](/docs/modules/observe.md)
+- [docs/modules/execute.md](/docs/modules/execute.md)
+- [docs/modules/capture.md](/docs/modules/capture.md)

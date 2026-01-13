@@ -33,3 +33,10 @@ Run Example
 Where to Look for Details
 -------------------------
 - architecture.md, agent_logic.md, configuration.md, browser_integration.md, modules/*.md for per-file detail, logging_artifacts.md for artifact formats.
+
+Related module docs
+-------------------
+- [docs/modules/planner.md](/docs/modules/planner.md)
+- [docs/modules/langgraph_loop.md](/docs/modules/langgraph_loop.md)
+- [docs/modules/execute.md](/docs/modules/execute.md)
+- [docs/modules/observe.md](/docs/modules/observe.md)

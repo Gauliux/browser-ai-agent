@@ -44,3 +44,9 @@ Cleaning
 Viewing
 -------
 - Use trace.jsonl for step-by-step debugging; map step/session to screenshots and state JSONs.
+
+Related module docs
+-------------------
+- [docs/modules/termination_normalizer.md](/docs/modules/termination_normalizer.md) (terminal mapping/summary)
+- [docs/modules/execute.md](/docs/modules/execute.md) (execute artifacts)
+- [docs/modules/observe.md](/docs/modules/observe.md) (observation artifacts)

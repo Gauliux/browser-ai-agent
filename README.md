@@ -1,6 +1,6 @@
-Browser LangGraph Agent
+Browser AI Agent
 =======================
-A headful, persistent Playwright + OpenAI (function-calling) agent orchestrated by LangGraph. It observes pages via a DOM Set-of-Mark overlay, plans with a strict tool schema, executes actions with resilient fallbacks, and logs artifacts (JSON + screenshots + traces). Focus is on a universal strategy-driven agent (Plan B), not site-specific logic.
+A headful Playwright + OpenAI (function-calling) browser agent orchestrated by LangGraph. It uses a DOM Set-of-Mark overlay for observation, plans via a strict tool schema, and executes with simple fallbacks while logging JSON artifacts and screenshots.
 
 Demo
 ----
