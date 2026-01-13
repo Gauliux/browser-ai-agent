@@ -4,7 +4,7 @@ Browser LangGraph Agent
 Demo
 ----
 
-<video src="demo.mp4" width="800" muted loop controls></video>
+<img src="demo.gif" alt="UwU gif demo OwO">
 
 Overview
 --------
