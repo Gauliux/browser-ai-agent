@@ -92,14 +92,28 @@ async def execute_action(
         if action_type == "search":
             if not value:
                 raise RuntimeError("Search action requires a query in 'value'.")
-            # Try to type into focused element; if none, fall back to ctrl+l (address bar) then type query and Enter.
-            try:
-                await page.keyboard.type(str(value))
-                await page.keyboard.press("Enter")
-            except Exception:
-                await page.keyboard.press("Control+L")
-                await page.keyboard.type(str(value))
-                await page.keyboard.press("Enter")
+            # If element_id is provided, focus that element before typing; otherwise fallback to omnibox.
+            query = str(value)
+            if element_id is not None:
+                locator = await _locate_element(page, int(element_id))
+                await locator.scroll_into_view_if_needed()
+                try:
+                    await locator.click()
+                except Exception:
+                    pass
+                await locator.fill(query)
+                try:
+                    await page.keyboard.press("Enter")
+                except Exception:
+                    pass
+            else:
+                try:
+                    await page.keyboard.type(query)
+                    await page.keyboard.press("Enter")
+                except Exception:
+                    await page.keyboard.press("Control+L")
+                    await page.keyboard.type(query)
+                    await page.keyboard.press("Enter")
             screenshot = await _maybe_capture(page, screenshots_dir, prefix="exec-search", label=screenshot_label)
             return ExecutionResult(True, action, None, screenshot, recorded_at)
         if action_type == "scroll":
