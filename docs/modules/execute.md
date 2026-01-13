@@ -14,7 +14,7 @@ Data Structures
 Action Execution
 ----------------
 - Supported actions: done/ask_user (meta), go_back/go_forward, navigate (value required),
-  search (type query + Enter, with Ctrl+L fallback), scroll, click, type (fill + optional Enter), screenshot.
+  search (if element_id provided: focus/fill + Enter; else type + Enter with Ctrl+L fallback), scroll, click, type (fill + optional Enter), screenshot.
 - switch_tab как first-class: переключение активной страницы делается на уровне runtime/execute-node;
   само исполнение не должно трактовать tab-switch как failure.
 - Скрины: filenames включают label (обычно session-step).
