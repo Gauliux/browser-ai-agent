@@ -1,291 +1,189 @@
-## ПЛАН B: StrategyProfile как слой терпимости, контекста и интерпретации
+## Plan B: StrategyProfile as a layer of tolerance, context, and interpretation
 
-(без управления действиями и без доменной логики в коде)
-
----
-
-## I. БАЗОВАЯ ИДЕЯ ПЛАНА B (ФИКСАЦИЯ И ТЕРМИНЫ)
-
-**StrategyProfile** — это *декларативный профиль исполнения*, который:
-
-* **НЕ является стратегией принятия решений**
-* **НЕ управляет действиями агента**
-* **НЕ анализирует среду выполнения**
-* **НЕ реагирует на DOM / URL / mapping / candidates**
-* **НЕ меняется динамически во время одного graph execution**
-
-StrategyProfile существует **вне core-логики** и применяется как *набор параметров и контекста*, используемых:
-
-* до старта графа,
-* и при пост-интерпретации результата.
-
-### StrategyProfile ИМЕЕТ ПРАВО ТОЛЬКО НА:
-
-1. задание *терпимости* (budgets / thresholds),
-2. добавление *декларативного текстового контекста* для planner,
-3. перегрузку *allowed_actions* (однократно, до запуска),
-4. интерпретацию результата (UX, объяснения).
+(no action control, no domain logic in code)
 
 ---
 
-## II. ГЛОБАЛЬНЫЕ ОГРАНИЧЕНИЯ (ЗАКОН ПЛАНА B)
+## I. Core idea (definitions)
 
-Эти ограничения **абсолютны**.
-Нарушение любого пункта = **Plan B деградирует в Plan A**.
+**StrategyProfile** is a *declarative execution profile* that:
 
----
+- is **NOT** a decision-making strategy
+- does **NOT** control agent actions
+- does **NOT** analyze the runtime environment
+- does **NOT** react to DOM / URL / mapping / candidates
+- does **NOT** change dynamically within a single graph execution
 
-### II.1. Абсолютно запрещено (НАВСЕГДА)
+StrategyProfile lives **outside core logic** and is applied as a *set of parameters and context* used:
 
-StrategyProfile **НЕ ИМЕЕТ ПРАВА**:
+- before the graph starts,
+- and for post-interpretation of the result.
 
-* ❌ добавлять **кодовые site-specific условия**
-  *(if hostname == …, if url contains …)*
-
-* ❌ анализировать DOM, mapping, candidates, page text
-
-* ❌ читать или интерпретировать сигналы среды выполнения
-
-* ❌ влиять на выбор следующего действия
-  *(прямо или косвенно)*
-
-* ❌ менять allowed_actions **по ходу выполнения**
-
-* ❌ менять stop_reason enum или вводить новые terminal states
-
-* ❌ добавлять новые FSM-стадии, узлы или переходы графа
-
-* ❌ менять порядок или логику существующих узлов
-
-* ❌ влиять на scorer, confidence, commit-path
-
-* ❌ содержать правила вида
-  **“если X → делай Y”**
-
-**Ключевой инвариант:**
-
-> StrategyProfile никогда не знает и не проверяет,
-> **что агент “видит” или “нашёл”.**
+### StrategyProfile may ONLY:
+1. set *tolerances* (budgets / thresholds),
+2. add *declarative textual context* for the planner,
+3. override *allowed_actions* (once, before start),
+4. interpret the result (UX, explanations).
 
 ---
 
-## III. МОДЕЛЬ ПРИМЕНЕНИЯ ПРОФИЛЯ (КРИТИЧЕСКИ ВАЖНО)
+## II. Global constraints (the law of Plan B)
 
-### III.1. Когда применяется StrategyProfile
+These constraints are **absolute**. Violating any point = **Plan B degrades into Plan A**.
 
-* Профиль применяется **ТОЛЬКО при старте нового graph execution**
-* Все параметры профиля считаются **константами** внутри одного run
+### II.1. Absolutely forbidden
 
-❌ Запрещено:
+StrategyProfile **MUST NOT**:
 
-* менять профиль в середине выполнения
-* “адаптировать” профиль по ходу графа
+- add **code-level site-specific conditions**  
+  *(if hostname == ..., if url contains ...)*  
+- analyze DOM, mapping, candidates, page text  
+- read or interpret runtime signals  
+- influence the choice of the next action (directly or indirectly)  
+- change allowed_actions **during execution**  
+- change stop_reason enum or introduce new terminal states  
+- add new FSM stages, nodes, or graph transitions  
+- change the order/logic of existing nodes  
+- influence scorer, confidence, commit-path  
+- contain rules like **“if X → do Y”**
+
+**Key invariant:**  
+StrategyProfile never knows or checks **what the agent “sees” or “found.”**
 
 ---
 
-### III.2. Ручное переключение профиля (РАЗРЕШЕНО)
+## III. Application model (critical)
 
-Разрешено и обязательно поддерживается:
+### III.1. When it applies
+- Profile applies **ONLY at the start of a new graph execution**.
+- All profile parameters are **constant** within one run.
 
-* Переключение происходит:
+Forbidden:
+- changing the profile mid-run
+- “adapting” the profile during the graph
 
-  * **между пользовательскими запросами**
-  * **без перезапуска runtime**
-* Новый запрос → новый graph → новый StrategyProfile
+### III.2. Manual switching (allowed)
+- Switching is allowed **between user requests** without restarting the runtime.
+- New request → new graph → new StrategyProfile.
 
 ---
 
-## IV. МОДЕЛЬ ЗНАЧЕНИЙ ПО УМОЛЧАНИЮ (ФИКСАЦИЯ)
+## IV. Defaults model
 
-### Принятое решение:
+Decision:
+- Parameters exist by default *without* a profile.
+- StrategyProfile is an override on top of DefaultSettings.
 
-**Параметры существуют по умолчанию БЕЗ профиля.
-StrategyProfile — это override поверх DefaultSettings.**
+Reasons:
+- universal agent is first-class,
+- profile is optional,
+- no profile = stable, expected behavior,
+- profile can be partial/incomplete.
 
-### Причины:
-
-* универсальный агент — first-class сценарий,
-* профиль необязателен,
-* отсутствие профиля = стабильное, ожидаемое поведение,
-* профиль может быть частичным и неполным.
-
-### Формальное правило:
-
-* Есть `DefaultSettings`
-* Есть `StrategyProfile`
-* Итоговые параметры вычисляются как:
-
+Rule:
 ```
-EffectiveSettings = DefaultSettings + overrides из StrategyProfile
+EffectiveSettings = DefaultSettings + overrides from StrategyProfile
 ```
-
-Если поле не задано в профиле → используется default.
-
----
-
-## V. КОНТРАКТ StrategyProfile (ПОЛНЫЙ, БЕЗ КОДА)
-
-StrategyProfile может содержать **ТОЛЬКО следующие группы параметров**.
+If a field is absent in the profile → use default.
 
 ---
 
-### V.1. Budgets / Терпимость (РАЗРЕШЕНО)
+## V. StrategyProfile contract (no code)
 
-StrategyProfile **может перегружать**:
+StrategyProfile may contain **ONLY** the groups below.
 
-* max_no_progress_steps
-* max_steps
-* max_planner_calls
-* max_auto_scrolls
-* другие **уже существующие** бюджеты
+### V.1. Budgets / tolerance (allowed)
+- May override: max_no_progress_steps, max_steps, max_planner_calls, max_auto_scrolls, other **existing** budgets.
 
-#### Ограничения:
+Constraints:
+- no new counters,
+- no conditional budgets in code (“if listing then ...”).
 
-* ❌ нельзя вводить новые счётчики
-* ❌ нельзя вводить условные бюджеты в коде
-  *(“если листинг, то …”)*
+Allowed:
+- *textual expectations* for the planner prompt (not code logic).
 
-⚠️ Допустимо:
+### V.2. Allowed actions (allowed, strict bounds)
+- May directly override allowed_actions.
 
-* **текстовое описание ожиданий** (для planner prompt),
-  но не кодовая логика.
+Rules:
+- override happens **once before graph start**,
+- final list must be a **subset of globally allowed actions**.
 
----
+Forbidden:
+- changing allowed_actions dynamically,
+- changing allowed_actions depending on page/DOM.
 
-### V.2. Allowed Actions (РАЗРЕШЕНО, С ЖЁСТКИМИ ГРАНИЦАМИ)
+> Allowed_actions is a permission profile, not a behavior strategy.
 
-StrategyProfile **может напрямую перегружать allowed_actions**.
+### V.3. Planner prompt parameterization (allowed, declarative only)
+- May add context describing the **expected class of environment**; provides **semantic framing**, not an algorithm.
 
-#### Правила:
+Allowed:
+- declarative environment descriptions (“marketplace,” “typical goal is find/compare/add to cart”),
+- expected page artifacts as text only (search, cards, cart, filters),
+- override of existing textual flags: task_mode, explore_mode, avoid_search, listing_detected,
+- naming specific platforms as a **class of environment** (e.g., “Ozon, Amazon, Yandex Market”) **WITHOUT code if/else**.
 
-* override применяется **один раз перед запуском графа**
-* итоговый список:
+Forbidden:
+- changing JSON schema,
+- changing function calling format,
+- changing plan format,
+- adding step-by-step instructions,
+- telling what to do first,
+- turning the prompt into an alternative planner.
 
-  * должен быть **подмножеством глобально допустимых действий**
+Formula:  
+StrategyProfile may **describe the world**, but not **teach planning**.
 
-#### Запрещено:
+### V.4. UX and result interpretation (allowed)
+- May set a dictionary for terminal_reason interpretation,
+- may set UX-summary style,
+- may add a “human-friendly explanation” of completion.
 
-* ❌ менять allowed_actions динамически
-* ❌ менять allowed_actions в зависимости от страницы/DOM
-
-**Allowed_actions — это профиль допуска,
-а не стратегия поведения.**
-
----
-
-### V.3. Параметризация planner prompt
-
-(РАЗРЕШЕНО, СТРОГО ДЕКЛАРАТИВНО)
-
-StrategyProfile **может добавлять контекст**, который:
-
-* описывает **ожидаемый класс среды**
-* формирует **semantic framing**, но не алгоритм
-
-#### Разрешено:
-
-* декларативные описания среды, например:
-
-  * “ты работаешь с маркетплейсом”
-  * “типичная цель — поиск и выбор товара”
-* описание **ожидаемых артефактов страницы**
-  *(как текст, без проверок)*:
-
-  * поиск, карточки, корзина, фильтры
-* расширение / override существующих текстовых флагов:
-
-  * task_mode
-  * explore_mode
-  * avoid_search
-  * listing_detected
-
-#### Разрешено (ВАЖНО):
-
-* указывать конкретные платформы **как класс среды**
-  *(“Ozon, Amazon, Yandex Market”)*
-  **БЕЗ кодовых if/else**
+Constraints:
+- UX interpretation does not affect stop_reason,
+- UX cannot change the fact of termination,
+- UX cannot initiate new actions.
 
 ---
 
-#### Запрещено:
+## VI. What StrategyProfile must never do (short law)
 
-* ❌ менять JSON schema
-* ❌ менять function calling
-* ❌ менять формат плана
-* ❌ добавлять пошаговые инструкции
-* ❌ подсказывать, что делать первым
-* ❌ превращать prompt в альтернативный planner
+StrategyProfile **CANNOT**:
+- control actions,
+- analyze the page,
+- react to the environment,
+- change graph flow,
+- influence commit,
+- contain domain if/else,
+- be an alternative planner,
+- be a hidden observe.
 
-**Формула:**
-
-> StrategyProfile может **описывать мир**,
-> но не **учить планировать**.
-
----
-
-### V.4. UX и интерпретация результата (РАЗРЕШЕНО)
-
-StrategyProfile **может**:
-
-* задавать словарь интерпретаций terminal_reason
-* задавать стиль UX-summary
-* добавлять “человеческое объяснение” завершения
-
-#### Ограничения:
-
-* ❌ UX-интерпретация не влияет на stop_reason
-* ❌ UX не меняет факт завершения
-* ❌ UX не может инициировать новые действия
+**Core principle:**  
+StrategyProfile describes expectations, but does not verify reality.
 
 ---
 
-## VI. ЧЕГО StrategyProfile НЕ ИМЕЕТ ПРАВА ДЕЛАТЬ (КРАТКИЙ ЗАКОН)
-
-StrategyProfile **НЕ МОЖЕТ**:
-
-* управлять действиями
-* анализировать страницу
-* реагировать на среду
-* менять ход графа
-* влиять на commit
-* содержать доменные if/else
-* быть альтернативным planner’ом
-* быть скрытым observe
-
-**Ключевой принцип:**
-
-> StrategyProfile описывает ожидания,
-> но не проверяет реальность.
+## VII. Minimal implementation order
+1. Fix DefaultSettings as the source of truth.
+2. Introduce StrategyProfile as an override object.
+3. Apply profile **before** GraphState creation.
+4. Wire profile to:
+   - budgets,
+   - allowed_actions,
+   - planner prompt (context only).
+5. Wire profile to UX-summary.
+6. Add manual profile selection:
+   - per user request,
+   - without runtime restart.
 
 ---
 
-## VII. МИНИМАЛЬНЫЙ ПОРЯДОК РЕАЛИЗАЦИИ ПЛАНА B
-
-1. Зафиксировать DefaultSettings как источник истины
-2. Ввести StrategyProfile как override-объект
-3. Реализовать механизм применения профиля:
-
-   * перед созданием GraphState
-4. Подключить профиль:
-
-   * к budgets
-   * к allowed_actions
-   * к planner prompt (context only)
-5. Подключить профиль к UX-summary
-6. Добавить ручной выбор профиля:
-
-   * при старте запроса
-   * без рестарта runtime
-
----
-
-## VIII. КРИТЕРИЙ УСПЕХА ПЛАНА B
-
-Plan B считается реализованным, если:
-
-* универсал работает без профиля
-* профиль выбирается вручную
-* профиль меняет терпимость и контекст
-* в core нет доменных if/else
-* StrategyProfile можно удалить без поломки системы
-* архитектура остаётся прозрачной и проверяемой
+## VIII. Success criteria
+Plan B is done when:
+- the universal agent works without a profile,
+- profile is selected manually,
+- profile changes only tolerance and context,
+- core has no domain if/else,
+- StrategyProfile can be removed without breaking the system,
+- architecture remains transparent and auditable.

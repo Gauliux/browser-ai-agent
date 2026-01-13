@@ -1,51 +1,51 @@
-Браузерный агент на LangGraph
-=============================
+Браузерный AI агент
+===================
+Headful Playwright + OpenAI (function-calling) агент, оркестрируемый LangGraph. Использует DOM Set-of-Mark для наблюдения, планирует по строгой схеме tool call, исполняется с простыми фолбэками и пишет артефакты (JSON, скриншоты, трейс).
 
-Обзор
------
-Headful Playwright + OpenAI (function-calling) агент, оркестрируемый LangGraph. Наблюдает DOM через Set-of-Mark, планирует по строгой схеме tool call, исполняет действия с устойчивыми фолбэками, сохраняет артефакты (JSON + скриншоты + трейс). Фокус — универсальный агент (Plan B), без site-specific логики.
+Demo
+----
+<img src="demo.gif" alt="UwU gif demo OwO">
 
 Технологии
 ----------
 - Python 3.10+ (async)
 - Playwright Chromium (headful, persistent profile)
 - OpenAI SDK (function-calling)
-- LangGraph (граф оркестрации)
+- LangGraph (оркестрация графа)
 - jsonschema, python-dotenv
 
-Текущее состояние
------------------
-- Основной цикл: LangGraph; legacy loop оставлен лишь как fallback.
-- Стадии FSM: orient → context → locate → verify → done.
-- Терминалы: goal_satisfied, goal_failed, loop_stuck, budget_exhausted.
-- Нет авто-выбора вкладки (switch_tab только явный). Классификация страниц — listing/detail. Тестов/моков нет.
-
-Цикл исполнения (LangGraph)
+Дорожная карта документации
 ---------------------------
-1) observe: захват DOM mapping (Set-of-Mark), опциональный скрин, детекция loop/stagnation, метаданные вкладок.  
-2) loop_mitigation: аккуратный проход (опция) и paged_scan с boost лимита.  
-3) goal_check: повышение стадии, терминалы по целям/бюджетам/лупу.  
-4) planner: собирает контекст (goal/stage/page_type/tabs/candidates/errors/loop), вызывает OpenAI tool schema.  
-5) safety: эвристика риска (ключевые слова, карты, рискованные домены/пути).  
-6) confirm: запрос/авто-подтверждение при необходимости.  
-7) execute: действие с фолбэками (reobserve+scroll wiggle → JS click → text-match), обрабатывает switch_tab, пишет контекстные события.  
-8) progress: скоринг, auto_done/ask_user по стадиям/настройкам, обновление счётчиков.  
-9) ask_user: интерактивно только если INTERACTIVE_PROMPTS=true; иначе авто-stop_reason.  
-10) error_retry: один повтор после planner/execute ошибок/таймаутов/disallowed.  
-Поток: START → observe → (loop_mitigation?) → goal_check → planner → safety → confirm → execute → progress → ask_user → observe/END.
+- Быстрый старт: [docs/setup.md](/docs/setup.md) (установка/запуск) → [docs/configuration.md](/docs/configuration.md) (env/CLI справочник).
+- Обзор системы: [docs/architecture.md](/docs/architecture.md) (компоненты/потоки) и [docs/structure.md](/docs/structure.md) (структура репо).
+- Поведение: [docs/agent_logic.md](/docs/agent_logic.md) (FSM, цикл), [docs/browser_integration.md](/docs/browser_integration.md) (Playwright + Set-of-Mark), [docs/llm_handoff.md](/docs/llm_handoff.md) (контракт планера), [docs/logging_artifacts.md](/docs/logging_artifacts.md) (артефакты).
+- Внутренности модулей: `docs/modules/` — начните с [langgraph_loop.md](/docs/modules/langgraph_loop.md) (сборка графа), далее [observe.md](/docs/modules/observe.md), [planner.md](/docs/modules/planner.md), [execute.md](/docs/modules/execute.md), [loop.md](/docs/modules/loop.md) (legacy), [runtime.md](/docs/modules/runtime.md), [security.md](/docs/modules/security.md), [capture.md](/docs/modules/capture.md), [graph_state.md](/docs/modules/graph_state.md), [graph_orchestrator.md](/docs/modules/graph_orchestrator.md), [ui_shell.md](/docs/modules/ui_shell.md), [ux_narration.md](/docs/modules/ux_narration.md), [termination_normalizer.md](/docs/modules/termination_normalizer.md), [state.md](/docs/modules/state.md) (legacy buffer).
+- Ограничения и планы: [docs/limitations_todo.md](/docs/limitations_todo.md) (что не покрыто) и [docs/rationale.md](/docs/rationale.md) (компромиссы).
+- Концепция Plan B (RFC): [docs/plan_b.md](/docs/plan_b.md) про StrategyProfile (декларативно, без DOM-логики).
 
-Артефакты и логи
-----------------
-- data/state: observation-*.json, planner-*.json (raw при ENABLE_RAW_LOGS), execute-*.json
-- data/screenshots: observe-*.png, exec-*.png, exec-js-click/text-click
-- data/user_data: persistent профиль браузера
-- logs/agent.log, logs/trace.jsonl (если доступно)
+Как работает сейчас
+-------------------
+- По умолчанию: LangGraph всегда включён; legacy включается только если граф не инициализировался. Исполнение включено; `--plan-only` его отключает.
+- FSM/терминалы: стадии orient → context → locate → verify → done; терминалы фиксированы (goal_satisfied, goal_failed, loop_stuck, budget_exhausted).
+- Вкладки/типы страниц: нет авто-переключения вкладок (только action switch_tab); тип страницы — эвристика listing/detail; автотестов и моков нет.
+- Цикл (узлы LangGraph):
+  1) observe (node_observe/observe.py): снимает DOM mapping (Set-of-Mark), опц. скрин, хэши для loop/stagnation, метаданные вкладок.
+  2) loop_mitigation (node_loop_mitigation): опц. «консервативное» observe, затем paged_scan с boost mapping до max_auto_scrolls.
+  3) goal_check (node_goal_check): повышает стадию, ставит терминалы по целям/бюджетам/лупу, классифицирует page_type.
+  4) planner (node_planner/planner.py): собирает контекст (goal/stage/page_type/tabs/candidates/errors/loop) и вызывает OpenAI tool schema.
+  5) safety (node_safety/security.py): эвристика риска (ключевые слова, карты, рискованные домены/пути).
+  6) confirm (node_confirm): запрашивает/авто-подтверждает при необходимости (auto_confirm обходит).
+  7) execute (node_execute/execute.py): исполняет действие с фолбэками (reobserve+scroll wiggle → JS click → text-match), обрабатывает switch_tab, пишет контекстные события.
+  8) progress (node_progress): считает прогресс, auto_done/ask_user по настройкам/стадии, обновляет repeat/no-progress/planner_calls/step.
+  9) ask_user (node_ask_user): интерактивно только при INTERACTIVE_PROMPTS=true, иначе сразу пишет stop_reason.
+  10) error_retry (node_error_retry): один повтор после ошибок/таймаутов planner/execute/disallowed.
+  Поток: START → observe → (loop_mitigation?) → goal_check → planner → safety → confirm → execute → progress → ask_user → observe/END.
 
 Установка
 ---------
 1) Установить зависимости:
 ```
-pip install -r requirements.txt  # если есть
+pip install -r requirements.txt
 # или минимальный набор
 pip install playwright openai jsonschema python-dotenv
 playwright install chromium
@@ -53,16 +53,15 @@ playwright install chromium
 2) Создать `.env` в корне:
 ```
 OPENAI_API_KEY=ваш_ключ
+OPENAI_MODEL=модель
 ```
-Остальные переменные — опционально (см. ниже).
+Остальные переменные — опционально.
 
 Запуск
 ------
-Базово (LangGraph по умолчанию, с исполнением):
-```
-python src/main.py --goal "Найди товар"
-```
-(`--langgraph` больше не нужен; граф используется всегда, legacy включается только как fallback при ошибке.)
+Базово:
+`python src/main.py` или `python src/main.py --goal "Найди товар"`
+
 Полезные флаги:
 - `--hide-overlay` скрыть оверлей
 - `--clean-between-goals` чистить logs/state/screenshots между целями
@@ -70,80 +69,38 @@ python src/main.py --goal "Найди товар"
 - `--plan-only` отключить исполнение (только план/отладка)
 - `--auto-confirm` пропуск подтверждений (осторожно)
 
-UI Shell
---------
-```
-python src/main.py --ui-shell
-```
-- Уважает `INTERACTIVE_PROMPTS` в ask_user/confirm.
-- `--ui-step-limit` — отдельный лимит шагов для UI shell.
+Артефакты и логи
+----------------
+- data/state: observation-*.json, planner-*.json (raw при ENABLE_RAW_LOGS), execute-*.json
+- data/screenshots: observe-*.png, exec-*.png, exec-js-click/text-click
+- data/user_data: persistent профиль браузера
+- logs/agent.log, logs/trace.jsonl (если доступны)
 
 Конфигурация (Env / .env / CLI)
--------------------------------
-Приоритет: CLI > .env > env. Ключевые параметры:
-- OPENAI_API_KEY, OPENAI_MODEL (по умолчанию gpt-4o-mini), OPENAI_BASE_URL
-- START_URL (about:blank), HEADLESS (false)
-- MAPPING_LIMIT (30)
-- PLANNER_SCREENSHOT_MODE (auto|always|never; по умолчанию auto)
-- MAX_STEPS (6), PLANNER_TIMEOUT_SEC (25), EXECUTE_TIMEOUT_SEC (20)
-- AUTO_CONFIRM (false), ENABLE_RAW_LOGS (true)
-- LOOP_REPEAT_THRESHOLD (2), STAGNATION_THRESHOLD (2), MAX_AUTO_SCROLLS (3), LOOP_RETRY_MAPPING_BOOST (20)
-- PROGRESS_KEYWORDS (список через запятую)
-- AUTO_DONE_MODE (ask|auto), AUTO_DONE_THRESHOLD (2), AUTO_DONE_REQUIRE_URL_CHANGE (true)
-- PAGED_SCAN_STEPS (2), PAGED_SCAN_VIEWPORTS (2)
-- OBSERVE_SCREENSHOT_MODE (on_demand|always; по умолчанию on_demand)
-- HIDE_OVERLAY (false)
-- VIEWPORT_WIDTH/HEIGHT, SYNC_VIEWPORT_WITH_WINDOW (false)
-- TYPE_SUBMIT_FALLBACK (true)
-- CONSERVATIVE_OBSERVE (false)
-- MAX_REOBSERVE_ATTEMPTS (1), MAX_ATTEMPTS_PER_ELEMENT (3), SCROLL_STEP (600)
-- MAX_PLANNER_CALLS (20), MAX_NO_PROGRESS_STEPS (20)
-- INTERACTIVE_PROMPTS (false)
-- Переопределения путей: USER_DATA_DIR, SCREENSHOTS_DIR, STATE_DIR, LOGS_DIR
-- Security списки: SENSITIVE_PATHS, RISKY_DOMAINS
-- USE_LANGGRAPH (включить граф; по умолчанию включён)
+--------------------------------
+Приоритет: CLI > .env > env. Полный список: [docs/configuration.md](/docs/configuration.md).
 
-Справка по параметрам (коротко)
--------------------------------
-Env / .env:
-- `OPENAI_API_KEY` (обязателен), `OPENAI_MODEL` (gpt-4o-mini по умолчанию), `OPENAI_BASE_URL`
+Env / .env (ключевые):
+- `OPENAI_API_KEY` (обязательно), `OPENAI_MODEL`, `OPENAI_BASE_URL`
 - `START_URL` (about:blank), `HEADLESS` (true|false)
 - `MAPPING_LIMIT` (int)
 - `PLANNER_SCREENSHOT_MODE` (auto|always|never; по умолчанию auto)
 - `OBSERVE_SCREENSHOT_MODE` (on_demand|always; по умолчанию on_demand)
 - Бюджеты/таймауты: `MAX_STEPS`, `PLANNER_TIMEOUT_SEC`, `EXECUTE_TIMEOUT_SEC`, `MAX_PLANNER_CALLS`, `MAX_NO_PROGRESS_STEPS`
-- Луп: `LOOP_REPEAT_THRESHOLD`, `STAGNATION_THRESHOLD`, `MAX_AUTO_SCROLLS`, `LOOP_RETRY_MAPPING_BOOST`, `PAGED_SCAN_STEPS`, `PAGED_SCAN_VIEWPORTS`, `CONSERVATIVE_OBSERVE` (true|false)
-- Safety/UX: `AUTO_CONFIRM` (true|false), `INTERACTIVE_PROMPTS` (true|false), `PROGRESS_KEYWORDS`, `AUTO_DONE_MODE` (ask|auto), `AUTO_DONE_THRESHOLD` (int), `AUTO_DONE_REQUIRE_URL_CHANGE` (true|false)
-- Устойчивость исполнения: `MAX_REOBSERVE_ATTEMPTS`, `MAX_ATTEMPTS_PER_ELEMENT`, `SCROLL_STEP`, `TYPE_SUBMIT_FALLBACK` (true|false)
-- Overlay/viewport: `HIDE_OVERLAY` (true|false), `VIEWPORT_WIDTH/HEIGHT` (ints), `SYNC_VIEWPORT_WITH_WINDOW` (true|false)
+- Loop: `LOOP_REPEAT_THRESHOLD`, `STAGNATION_THRESHOLD`, `MAX_AUTO_SCROLLS`, `LOOP_RETRY_MAPPING_BOOST`, `PAGED_SCAN_STEPS`, `PAGED_SCAN_VIEWPORTS`, `CONSERVATIVE_OBSERVE`
+- Safety/UX: `AUTO_CONFIRM`, `INTERACTIVE_PROMPTS`, `PROGRESS_KEYWORDS`, `AUTO_DONE_MODE`, `AUTO_DONE_THRESHOLD`, `AUTO_DONE_REQUIRE_URL_CHANGE`
+- Устойчивость исполнения: `MAX_REOBSERVE_ATTEMPTS`, `MAX_ATTEMPTS_PER_ELEMENT`, `SCROLL_STEP`, `TYPE_SUBMIT_FALLBACK`
+- Overlay/view: `HIDE_OVERLAY`, `VIEWPORT_WIDTH/HEIGHT`, `SYNC_VIEWPORT_WITH_WINDOW`
 - Пути: `USER_DATA_DIR`, `SCREENSHOTS_DIR`, `STATE_DIR`, `LOGS_DIR`
 - Security: `SENSITIVE_PATHS`, `RISKY_DOMAINS`
 
-CLI-флаги (override env)
-------------------------
-- `--goal` / `--goals` (очередь целей)
-- `--plan-only` (отключить исполнение; по умолчанию включено)
+CLI-флаги (override env):
+- `--goal` / `--goals`
+- `--plan-only` отключает исполнение
 - `--auto-confirm`
-- `--max-steps`, `--planner-timeout`, `--execute-timeout`
-- `--screenshot-mode` (planner: auto|always|never), `--observe-screenshot-mode` (observe: on_demand|always)
-- `--mapping-limit`
-- `--loop-repeat-threshold`, `--stagnation-threshold`, `--max-auto-scrolls`, `--loop-retry-mapping-boost`
-- `--hide-overlay`
-- `--paged-scan-steps`, `--paged-scan-viewports`
-- `--auto-done-mode`, `--auto-done-threshold`, `--auto-done-require-url-change`
-- `--sync-viewport` / `--no-sync-viewport`
-- `--clean-between-goals`
-- `--ui-shell`, `--ui-step-limit`
-- `--conservative-observe`
-- `--max-reobserve-attempts`, `--max-attempts-per-element`, `--scroll-step`
-
-Справка по CLI (коротко):
-- `--goal`/`--goals` задают цели
-- `--plan-only` отключает действия (режим планирования)
-- `--auto-confirm` пропускает подтверждение безопасности
 - Время/бюджеты: `--max-steps`, `--planner-timeout`, `--execute-timeout`, `--max-planner-calls`, `--max-no-progress-steps`
 - Mapping/loop: `--mapping-limit`, `--loop-repeat-threshold`, `--stagnation-threshold`, `--max-auto-scrolls`, `--loop-retry-mapping-boost`, `--paged-scan-steps`, `--paged-scan-viewports`, `--conservative-observe`
-- Скриншоты/overlay: `--screenshot-mode` (planner), `--observe-screenshot-mode` (observe), `--hide-overlay`
+- Скриншоты/overlay: `--screenshot-mode` (planner: auto|always|never), `--observe-screenshot-mode` (observe: on_demand|always), `--hide-overlay`
 - Auto-done: `--auto-done-mode`, `--auto-done-threshold`, `--auto-done-require-url-change`
-- Viewport/scroll: `--sync-viewport`/`--no-sync-viewport`, `--scroll-step`, `--max-reobserve-attempts`, `--max-attempts-per-element`
+- Viewport/scroll: `--sync-viewport` / `--no-sync-viewport`, `--scroll-step`, `--max-reobserve-attempts`, `--max-attempts-per-element`
 - Workflow: `--clean-between-goals`, `--ui-shell`, `--ui-step-limit`
