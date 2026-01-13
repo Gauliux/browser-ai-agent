@@ -1,6 +1,11 @@
 Browser LangGraph Agent
 =======================
 
+Demo
+----
+
+<video src="demo.mp4" width="800" autoplay muted loop controls></video>
+
 Overview
 --------
 A headful, persistent Playwright + OpenAI (function-calling) agent orchestrated by LangGraph. It observes pages via a DOM Set-of-Mark overlay, plans with a strict tool schema, executes actions with resilient fallbacks, and logs artifacts (JSON + screenshots + traces). Focus is on a universal strategy-driven agent (Plan B), not site-specific logic.
